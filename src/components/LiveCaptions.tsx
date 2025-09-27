@@ -419,25 +419,40 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     });
   };
 
-  const translateCaptionLive = async (caption: Caption) => {
-    try {
-      const textToTranslate = caption.toneAdjustedText || caption.text;
-      const translatedText = await translateService.translate(textToTranslate, targetLang);
-      
-      // Add to translated items (newest first)
-      setTranslatedItems(prev => [
-        { id: caption.id, src: textToTranslate, dst: translatedText },
-        ...prev
-      ]);
-    } catch (error) {
-      console.error('Live translation failed:', error);
-      toast({
-        title: "Translation Failed",
-        description: "Unable to translate this caption.",
-        variant: "destructive"
-      });
-    }
-  };
+  // replace your current translateCaptionLive with this
+const translateCaptionLive = async (caption: Caption) => {
+  const textToTranslate = caption.toneAdjustedText || caption.text;
+
+  // 1) show something right away so the row doesn't vanish
+  setTranslatedItems(prev => [
+    { id: caption.id, src: textToTranslate, dst: "Translating…" },
+    ...prev,
+  ]);
+
+  try {
+    const translatedText = await translateService.translate(textToTranslate, targetLang);
+
+    // 2) replace the placeholder with the real translation
+    setTranslatedItems(prev =>
+      prev.map(item =>
+        item.id === caption.id ? { ...item, dst: translatedText } : item
+      )
+    );
+  } catch (error) {
+    // 3) keep the English line; mark failure instead of removing the row
+    setTranslatedItems(prev =>
+      prev.map(item =>
+        item.id === caption.id ? { ...item, dst: "(translation failed)" } : item
+      )
+    );
+    console.error("Live translation failed:", error);
+    toast({
+      title: "Translation Failed",
+      description: error instanceof Error ? error.message : String(error),
+      variant: "destructive",
+    });
+  }
+};
 
   const adjustCaptionTone = async (caption: Caption) => {
     try {
