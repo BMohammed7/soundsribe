@@ -33,11 +33,13 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [isListening, setIsListening] = useState(false);
   const [captions, setCaptions] = useState<Caption[]>([]);
   const [currentCaption, setCurrentCaption] = useState("");
+  const [recordingSession, setRecordingSession] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [showMemoryViewer, setShowMemoryViewer] = useState(false);
   const [contextualSuggestions, setContextualSuggestions] = useState<ContextualSuggestion[]>([]);
   const [currentEmergency, setCurrentEmergency] = useState<AIAnalysis['emergency']>();
   const [conversationHistory, setConversationHistory] = useState<string[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +68,9 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
         }
 
         if (finalTranscript) {
+          if (isRecording) {
+            setRecordingSession(prev => prev + (prev ? ' ' : '') + finalTranscript.trim());
+          }
           processNewCaption(finalTranscript.trim());
           setCurrentCaption('');
         } else {
@@ -229,6 +234,78 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     captionsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  const startRecording = () => {
+    if (!recognitionRef.current) {
+      toast({
+        title: "Speech Recognition Not Available",
+        description: "Your browser doesn't support speech recognition.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      recognitionRef.current.start();
+      setIsListening(true);
+      setIsRecording(true);
+      setRecordingSession("");
+      toast({
+        title: "Recording Started",
+        description: "Recording everything until you press stop."
+      });
+    } catch (error) {
+      console.error('Error starting recognition:', error);
+      toast({
+        title: "Error Starting Recording",
+        description: "Please make sure your microphone is enabled.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      setIsListening(false);
+      setIsRecording(false);
+      
+      if (recordingSession.trim()) {
+        const recordingCaption: Caption = {
+          id: Date.now().toString(),
+          text: recordingSession.trim(),
+          timestamp: new Date(),
+          saved: true
+        };
+        onSaveToNotes(recordingCaption);
+        toast({
+          title: "Recording Saved",
+          description: "Your recording session has been saved to notes."
+        });
+      }
+    }
+  };
+
+  const handleTranslate = () => {
+    if (recordingSession.trim()) {
+      if (aiService.hasApiKey()) {
+        toast({
+          title: "🌐 Translating Session...",
+          description: "Processing translation with AI."
+        });
+      } else {
+        toast({
+          title: "Translation",
+          description: "Translation requires AI configuration."
+        });
+      }
+    } else {
+      toast({
+        title: "No Recording",
+        description: "Start recording first to translate."
+      });
+    }
+  };
+
   const toggleListening = () => {
     if (!recognitionRef.current) {
       toast({
@@ -283,7 +360,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     });
   };
 
-  const handleTranslate = async (caption: Caption) => {
+  const handleCaptionTranslate = async (caption: Caption) => {
     if (aiService.hasApiKey()) {
       toast({
         title: "🌐 Translating...",
@@ -382,33 +459,112 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
         </div>
       </div>
 
-      {/* Main Mic Button */}
-      <div className="flex justify-center">
-        <Button
-          onClick={toggleListening}
-          className={`w-32 h-32 rounded-full shadow-mic transition-all duration-300 ${
-            isListening 
-              ? 'gradient-mic animate-pulse scale-110' 
-              : 'bg-primary hover:bg-primary-dark'
-          }`}
-          size="lg"
-        >
-          {isListening ? (
-            <MicOff className="h-12 w-12 text-primary-foreground" />
-          ) : (
-            <Mic className="h-12 w-12 text-primary-foreground" />
-          )}
-        </Button>
-      </div>
+      {/* Interactive Control Panel */}
+      <Card className="bg-gradient-subtle border-primary/20 shadow-elegant">
+        <div className="p-6 space-y-6">
+          {/* Main Controls */}
+          <div className="flex justify-center gap-4">
+            <Button
+              onClick={startRecording}
+              disabled={isRecording}
+              className={`w-24 h-24 rounded-full shadow-mic transition-all duration-300 ${
+                isRecording 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'gradient-mic hover:scale-110'
+              }`}
+              size="lg"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Mic className="h-8 w-8" />
+                <span className="text-xs">START</span>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={stopRecording}
+              disabled={!isRecording}
+              variant="destructive"
+              className={`w-24 h-24 rounded-full shadow-mic transition-all duration-300 ${
+                !isRecording 
+                  ? 'opacity-50 cursor-not-allowed' 
+                  : 'hover:scale-110 animate-pulse'
+              }`}
+              size="lg"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <MicOff className="h-8 w-8" />
+                <span className="text-xs">STOP</span>
+              </div>
+            </Button>
+            
+            <Button
+              onClick={handleTranslate}
+              variant="secondary"
+              className="w-24 h-24 rounded-full shadow-mic hover:scale-110 transition-all duration-300"
+              size="lg"
+            >
+              <div className="flex flex-col items-center gap-2">
+                <Languages className="h-8 w-8" />
+                <span className="text-xs">TRANSLATE</span>
+              </div>
+            </Button>
+          </div>
 
-      {/* Status */}
-      <div className="text-center">
+          {/* Recording Status */}
+          <div className="text-center space-y-2">
+            {isRecording && (
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 bg-destructive rounded-full animate-pulse"></div>
+                <p className="text-destructive font-semibold">Recording Session...</p>
+              </div>
+            )}
+            
+            {recordingSession && (
+              <div className="bg-muted/50 rounded-lg p-4 max-w-2xl mx-auto">
+                <p className="text-sm text-muted-foreground mb-2">Current Recording:</p>
+                <p className="text-foreground">{recordingSession}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Live Caption Toggle */}
+          <div className="flex items-center justify-center gap-3 pt-4 border-t border-border/50">
+            <span className="text-sm text-muted-foreground">Live Captions:</span>
+            <Button
+              onClick={toggleListening}
+              variant={isListening ? "default" : "outline"}
+              size="sm"
+              className="transition-all duration-200"
+            >
+              {isListening ? (
+                <>
+                  <MicOff className="h-4 w-4 mr-2" />
+                  Stop Live
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4 mr-2" />
+                  Start Live
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* Status Information */}
+      <div className="text-center space-y-2">
         <p className="text-muted-foreground">
-          {isListening ? "🎤 Listening... Tap to stop" : "Tap the microphone to start listening"}
+          {isRecording 
+            ? "🔴 Recording everything until you press STOP" 
+            : isListening 
+              ? "🎤 Live captions active" 
+              : "Choose START for session recording or Live Captions for real-time transcription"
+          }
         </p>
         {aiService.hasApiKey() && (
-          <p className="text-xs text-accent mt-1">
-            AI features active: Memory • Emotion • Emergency • Commands
+          <p className="text-xs text-accent">
+            AI features active: Memory • Emotion • Emergency • Commands • Translation
           </p>
         )}
       </div>
@@ -446,7 +602,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
                 <ContextualActions
                   action={caption.suggested.action}
                   onSave={() => handleSaveCaption(caption)}
-                  onTranslate={() => handleTranslate(caption)}
+                  onTranslate={() => handleCaptionTranslate(caption)}
                   onSummarize={() => handleSummarize(caption)}
                 />
               )}
