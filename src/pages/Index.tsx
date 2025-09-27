@@ -56,7 +56,7 @@ const Index = () => {
       {/* Header with Settings */}
       <header className="sticky top-0 z-40 bg-surface-elevated/80 backdrop-blur-md border-b border-border">
         <div className="w-full max-w-none sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex items-center justify-between">
-          <h1 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground truncate">Soundscribe AI</h1>
+          <h1 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground truncate">SoundScribe AI</h1>
           <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
             <Button
