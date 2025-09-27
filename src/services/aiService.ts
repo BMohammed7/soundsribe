@@ -89,6 +89,25 @@ class AIService {
     }
   }
 
+  async translateText(text: string, targetLanguage?: string): Promise<string> {
+    const language = targetLanguage || localStorage.getItem('preferredLanguage') || 'Spanish';
+    
+    if (!this.hasApiKey()) {
+      return `[Translation to ${language} not available - AI key required]`;
+    }
+
+    const systemPrompt = `You are a professional translator. Translate the given text to ${language}. 
+Provide only the translation, no explanations or additional text.`;
+
+    try {
+      const result = await this.callAI(text, systemPrompt);
+      return result.trim();
+    } catch (error) {
+      console.error('Translation failed:', error);
+      return `[Translation failed - please try again]`;
+    }
+  }
+
   async analyzeText(text: string, conversationHistory: string[] = []): Promise<AIAnalysis> {
     if (!this.hasApiKey()) {
       return this.fallbackAnalysis(text);

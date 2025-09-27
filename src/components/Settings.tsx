@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings, Key, Bot } from "lucide-react";
+import { Settings, Key, Bot, Languages } from "lucide-react";
 import { aiService } from "@/services/aiService";
 import { toast } from "@/hooks/use-toast";
 
@@ -11,6 +12,23 @@ export const SettingsDialog = () => {
   const [apiKey, setApiKey] = useState("");
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [preferredLanguage, setPreferredLanguage] = useState(
+    localStorage.getItem('preferredLanguage') || 'Spanish'
+  );
+
+  const languages = [
+    'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian',
+    'Chinese', 'Japanese', 'Korean', 'Arabic', 'Hindi', 'Dutch', 'Swedish'
+  ];
+
+  const handleLanguageChange = (language: string) => {
+    setPreferredLanguage(language);
+    localStorage.setItem('preferredLanguage', language);
+    toast({
+      title: "Language Updated",
+      description: `Translation language set to ${language}`
+    });
+  };
 
   const handleSetupAI = async () => {
     if (!apiKey.trim()) {
@@ -83,6 +101,25 @@ export const SettingsDialog = () => {
             </p>
           </div>
 
+          <div>
+            <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+              <Languages className="h-4 w-4" />
+              Preferred Translation Language
+            </label>
+            <Select value={preferredLanguage} onValueChange={handleLanguageChange}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                {languages.map((lang) => (
+                  <SelectItem key={lang} value={lang}>
+                    {lang}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <Button 
             onClick={handleSetupAI}
             disabled={isConfiguring}
@@ -93,7 +130,7 @@ export const SettingsDialog = () => {
 
           <div className="p-3 bg-muted rounded-lg">
             <p className="text-xs text-muted-foreground">
-              <strong>With AI:</strong> Memory, smart summarization, emotion detection, emergency alerts
+              <strong>With AI:</strong> Memory, smart summarization, emotion detection, emergency alerts, translation
               <br />
               <strong>Without AI:</strong> Basic pattern detection and keyword matching
             </p>

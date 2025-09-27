@@ -7,6 +7,7 @@ interface Caption {
   text: string;
   timestamp: Date;
   saved?: boolean;
+  translatedText?: string;
 }
 
 interface CaptionLineProps {
@@ -29,17 +30,27 @@ export const CaptionLine = ({ caption, onDelete, isInterim = false }: CaptionLin
       }`}
     >
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <p className={`text-foreground leading-relaxed ${
-            isInterim ? 'italic' : ''
-          }`}>
-            {caption.text}
-          </p>
-          <p className="text-xs text-muted-foreground mt-2">
-            {formatTime(caption.timestamp)}
-            {isInterim && " (interim)"}
-          </p>
-        </div>
+                <div className="flex-1">
+                  <p className={`text-foreground leading-relaxed ${
+                    isInterim ? 'italic' : ''
+                  }`}>
+                    {caption.text}
+                  </p>
+                  
+                  {caption.translatedText && (
+                    <div className="mt-2 p-2 bg-accent/10 rounded border-l-2 border-accent">
+                      <p className="text-sm text-accent font-medium">
+                        Translation ({localStorage.getItem('preferredLanguage') || 'Spanish'}):
+                      </p>
+                      <p className="text-foreground">{caption.translatedText}</p>
+                    </div>
+                  )}
+                  
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {formatTime(caption.timestamp)}
+                    {isInterim && " (interim)"}
+                  </p>
+                </div>
         
         {!isInterim && onDelete && (
           <Button

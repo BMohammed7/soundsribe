@@ -18,6 +18,7 @@ interface Caption {
   text: string;
   timestamp: Date;
   saved?: boolean;
+  translatedText?: string;
   aiAnalysis?: AIAnalysis;
   suggested?: {
     action: 'save' | 'translate' | 'summarize';
@@ -350,16 +351,30 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   };
 
   const handleCaptionTranslate = async (caption: Caption) => {
-    if (aiService.hasApiKey()) {
+    try {
       toast({
         title: "🌐 Translating...",
         description: "Processing translation with AI."
       });
-      // In a real implementation, this would call AI translation
-    } else {
+      
+      const translatedText = await aiService.translateText(caption.text);
+      
+      // Update the caption with translation
+      setCaptions(prev => 
+        prev.map(c => c.id === caption.id ? 
+          { ...c, translatedText } : c
+        )
+      );
+      
       toast({
-        title: "Translation",
-        description: "Translation feature requires AI configuration."
+        title: "Translation Complete",
+        description: `Translated to ${localStorage.getItem('preferredLanguage') || 'Spanish'}`
+      });
+    } catch (error) {
+      toast({
+        title: "Translation Failed",
+        description: "Please check your AI configuration and try again.",
+        variant: "destructive"
       });
     }
   };
