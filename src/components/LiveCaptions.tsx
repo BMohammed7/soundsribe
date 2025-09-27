@@ -64,6 +64,9 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
+  
+  // Track previous lengths to prevent scroll on initial mount
+  const prevLengthsRef = useRef({ captions: 0, translatedItems: 0, pendingBuffer: "" });
 
   // Keep latest live translation state in ref to avoid stale closures
   const liveRef = useRef(isLiveTranslationEnabled);
@@ -136,7 +139,22 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   }, []);
 
   useEffect(() => {
-    scrollToBottom();
+    const prevLengths = prevLengthsRef.current;
+    const hasNewCaptions = captions.length > prevLengths.captions;
+    const hasNewTranslations = translatedItems.length > prevLengths.translatedItems;
+    const hasNewPendingBuffer = pendingBuffer !== prevLengths.pendingBuffer && pendingBuffer !== "";
+    
+    // Only scroll if new content was actually added
+    if (hasNewCaptions || hasNewTranslations || hasNewPendingBuffer) {
+      scrollToBottom();
+    }
+    
+    // Update previous lengths for next comparison
+    prevLengthsRef.current = {
+      captions: captions.length,
+      translatedItems: translatedItems.length,
+      pendingBuffer: pendingBuffer
+    };
   }, [captions, translatedItems, pendingBuffer]);
 
   const processNewCaption = async (text: string) => {
