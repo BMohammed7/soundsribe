@@ -10,6 +10,7 @@ import { ContextualSuggestions } from "./ContextualSuggestions";
 import { EmergencyAlert } from "./EmergencyAlert";
 import { MemoryViewer } from "./MemoryViewer";
 import { ThemeToggle } from "./theme-toggle";
+import { SettingsDialog } from "./Settings";
 import { aiService, AIAnalysis, ContextualSuggestion, ToneMode } from "@/services/aiService";
 import { memoryService } from "@/services/memoryService";
 import "../types/speech.d.ts";
@@ -661,37 +662,6 @@ ${textsToTranslate}`;
         onClose={() => setShowMemoryViewer(false)} 
       />
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-foreground">Soundscribe Live Captions</h1>
-          {aiService.hasApiKey() && (
-            <Badge variant="secondary" className="bg-success/10 text-success border-success/30">
-              AI Active
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <ThemeToggle />
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowMemoryViewer(true)}
-            className="text-muted-foreground hover:text-foreground"
-            title="View Memory Bank"
-          >
-            <Brain className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setShowSettings(!showSettings)}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
 
       {/* Interactive Control Panel */}
       <Card className="bg-gradient-subtle border-primary/20 shadow-elegant">
@@ -789,6 +759,26 @@ ${textsToTranslate}`;
                 </>
               )}
             </Button>
+          </div>
+
+          {/* Control Buttons */}
+          <div className="flex items-center justify-center gap-2 pt-4 border-t border-border/50">
+            <ThemeToggle />
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowMemoryViewer(true)}
+              className="text-muted-foreground hover:text-foreground"
+              title="View Memory Bank"
+            >
+              <Brain className="h-5 w-5" />
+            </Button>
+            <SettingsDialog />
+            {aiService.hasApiKey() && (
+              <Badge variant="secondary" className="bg-success/10 text-success border-success/30 text-xs">
+                AI Active
+              </Badge>
+            )}
           </div>
 
           {/* Translation Status & Controls */}
