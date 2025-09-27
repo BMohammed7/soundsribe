@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -43,10 +43,15 @@ interface LiveCaptionsProps {
   onSaveToNotes: (caption: Caption) => void;
 }
 const LANG_MAP: Record<string, string> = {
-  english: "en", French: "fr", french: "fr", Spanish: "es", spanish: "es",
-  German: "de", german: "de", Italian: "it", italian: "it",
-  Portuguese: "pt", portuguese: "pt", Chinese: "zh", chinese: "zh",
-  Japanese: "ja", japanese: "ja", Korean: "ko", korean: "ko"
+  english: "en", English: "en",
+  french: "fr", French: "fr",
+  spanish: "es", Spanish: "es",
+  german: "de", German: "de",
+  italian: "it", Italian: "it",
+  portuguese: "pt", Portuguese: "pt",
+  chinese: "zh", Chinese: "zh",
+  japanese: "ja", Japanese: "ja",
+  korean: "ko", Korean: "ko",
 };
 const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [isListening, setIsListening] = useState(false);
@@ -67,6 +72,15 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
+
+  // Normalize language to code and keep latest value in ref
+  const targetLangCode = useMemo(() => {
+    const key = String(targetLang).trim();
+    return LANG_MAP[key] || LANG_MAP[key.toLowerCase()] || targetLang; // allow "fr-CA" pass-through
+  }, [targetLang]);
+
+  const targetLangRef = useRef(targetLangCode);
+  useEffect(() => { targetLangRef.current = targetLangCode; }, [targetLangCode]);
 
   useEffect(() => {
     // Load preferred tone mode from localStorage
@@ -326,9 +340,9 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       setIsListening(false);
       setIsRecording(false);
       
-      if (recordingSession.trim()) {
+        if (recordingSession.trim()) {
         const recordingCaption: Caption = {
-          id: Date.now().toString(),
+          id: crypto.randomUUID(),
           text: recordingSession.trim(),
           timestamp: new Date(),
           saved: true
@@ -350,11 +364,11 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
           description: "Processing translation with LibreTranslate API."
         });
         
-        const translatedText = await aiService.translateText(recordingSession.trim());
+        const translatedText = await translateService.translate(recordingSession.trim(), targetLangCode);
         
         // Create a new caption with the translated recording session
         const translatedCaption: Caption = {
-          id: `translated-${Date.now()}`,
+          id: crypto.randomUUID(),
           text: recordingSession.trim(),
           translatedText: translatedText,
           timestamp: new Date(),
@@ -367,7 +381,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
         
         toast({
           title: "Translation Complete",
-          description: `Session translated to ${localStorage.getItem('preferredLanguage') || 'Spanish'} and saved to notes.`
+          description: `Session translated to ${targetLang} and saved to notes.`
         });
       } catch (error) {
         toast({
@@ -424,32 +438,30 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     });
   };
 
-  // replace your current translateCaptionLive with this
 const translateCaptionLive = async (caption: Caption) => {
   const textToTranslate = caption.toneAdjustedText || caption.text;
-  console.log("[translateCaptionLive] start", { id: caption.id, targetLang, textToTranslate });
 
-  // Insert placeholder so UI has something to show instantly
-  setTranslatedItems(prev => {
-    const next = [{ id: caption.id, src: textToTranslate, dst: "Translating…" }, ...prev];
-    console.log("[translateCaptionLive] placeholder inserted", next[0]);
-    return next;
-  });
+  // Insert placeholder so UI shows something immediately
+  setTranslatedItems(prev => [
+    { id: caption.id, src: textToTranslate, dst: "Translating…" },
+    ...prev,
+  ]);
 
   try {
-    const translatedText = await translateService.translate(textToTranslate, targetLang);
-    console.log("[translateCaptionLive] success", { id: caption.id, translatedText });
+    const translatedText = await translateService.translate(textToTranslate, targetLangRef.current);
 
-    // Replace placeholder with the real translation
-    setTranslatedItems(prev => {
-      const next = prev.map(item => item.id === caption.id ? { ...item, dst: translatedText } : item);
-      console.log("[translateCaptionLive] placeholder replaced");
-      return next;
-    });
-  } catch (error) {
-    console.error("[translateCaptionLive] error", error);
+    // Replace placeholder with the final translation
     setTranslatedItems(prev =>
-      prev.map(item => item.id === caption.id ? { ...item, dst: "(translation failed)" } : item)
+      prev.map(item =>
+        item.id === caption.id ? { ...item, dst: translatedText } : item
+      )
+    );
+  } catch (error) {
+    // Keep the English line; mark failure
+    setTranslatedItems(prev =>
+      prev.map(item =>
+        item.id === caption.id ? { ...item, dst: "(translation failed)" } : item
+      )
     );
     toast({
       title: "Translation Failed",
@@ -539,7 +551,7 @@ const translateCaptionLive = async (caption: Caption) => {
         )
       );
       
-      const translatedText = await aiService.translateText(caption.text);
+      const translatedText = await translateService.translate(caption.text, targetLangCode);
       
       setCaptions(prev => 
         prev.map(c => c.id === caption.id ? 
@@ -549,7 +561,7 @@ const translateCaptionLive = async (caption: Caption) => {
       
       toast({
         title: "Translation Complete",
-        description: `Translated to ${localStorage.getItem('preferredLanguage') || 'Spanish'}`
+        description: `Translated to ${targetLang}`
       });
     } catch (error) {
       setCaptions(prev => 
@@ -834,6 +846,13 @@ const translateCaptionLive = async (caption: Caption) => {
                   {item.src}
                 </p>
               </div>
+            </div>
+          ))}
+
+          {/* Safety net: always show raw English finals as small/gray while Live Translate is ON */}
+          {isLiveTranslationEnabled && captions.map(c => (
+            <div key={`raw-${c.id}`} className="mb-2 text-muted-foreground text-sm opacity-70">
+              {c.text}
             </div>
           ))}
           

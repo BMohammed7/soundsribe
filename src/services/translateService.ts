@@ -33,6 +33,8 @@ class TranslateService {
 
       const data: TranslateResponse = await response.json();
       
+      console.debug("[translateService] →", { targetLang, data });
+      
       if (!data.translated) {
         throw new Error('Invalid response from translation service');
       }
