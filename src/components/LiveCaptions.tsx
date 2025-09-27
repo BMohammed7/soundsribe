@@ -82,6 +82,10 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const targetLangRef = useRef(targetLangCode);
   useEffect(() => { targetLangRef.current = targetLangCode; }, [targetLangCode]);
 
+  // Keep latest live translation state in ref to avoid stale closures
+  const liveRef = useRef(isLiveTranslationEnabled);
+  useEffect(() => { liveRef.current = isLiveTranslationEnabled; }, [isLiveTranslationEnabled]);
+
   useEffect(() => {
     // Load preferred tone mode from localStorage
     const savedToneMode = localStorage.getItem('preferredToneMode') as ToneMode;
@@ -192,8 +196,8 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       onSaveToNotes(captionToSave);
     }, 500); // Small delay to allow tone adjustment to complete
 
-    // Live translation if enabled
-    if (isLiveTranslationEnabled) {
+    // Live translation if enabled (use ref to avoid stale closure)
+    if (liveRef.current) {
       translateCaptionLive(newCaption);
     }
 
