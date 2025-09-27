@@ -9,6 +9,7 @@ import { ContextualActions } from "./ContextualActions";
 import { ContextualSuggestions } from "./ContextualSuggestions";
 import { EmergencyAlert } from "./EmergencyAlert";
 import { MemoryViewer } from "./MemoryViewer";
+import { ThemeToggle } from "./theme-toggle";
 import { aiService, AIAnalysis, ContextualSuggestion } from "@/services/aiService";
 import { memoryService } from "@/services/memoryService";
 import "../types/speech.d.ts";
@@ -514,6 +515,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <Button
             variant="ghost"
             size="icon"
