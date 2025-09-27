@@ -19,6 +19,7 @@ interface Caption {
   timestamp: Date;
   saved?: boolean;
   translatedText?: string;
+  isTranslating?: boolean;
   aiAnalysis?: AIAnalysis;
   suggested?: {
     action: 'save' | 'translate' | 'summarize';
@@ -40,6 +41,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [contextualSuggestions, setContextualSuggestions] = useState<ContextualSuggestion[]>([]);
   const [currentEmergency, setCurrentEmergency] = useState<AIAnalysis['emergency']>();
   const [conversationHistory, setConversationHistory] = useState<string[]>([]);
+  const [isLiveTranslationEnabled, setIsLiveTranslationEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
@@ -125,13 +127,19 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       text,
       timestamp: new Date(),
       aiAnalysis,
-      suggested: detectContextualAction(text, aiAnalysis)
+      suggested: detectContextualAction(text, aiAnalysis),
+      isTranslating: isLiveTranslationEnabled
     };
 
     setCaptions(prev => [...prev, newCaption]);
 
     // Automatically save to notes
     onSaveToNotes(newCaption);
+
+    // Live translation if enabled
+    if (isLiveTranslationEnabled) {
+      translateCaptionLive(newCaption);
+    }
 
     // Handle AI analysis results
     if (aiAnalysis) {
@@ -350,19 +358,56 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     });
   };
 
+  const translateCaptionLive = async (caption: Caption) => {
+    try {
+      const translatedText = await aiService.translateText(caption.text);
+      
+      setCaptions(prev => 
+        prev.map(c => c.id === caption.id ? 
+          { ...c, translatedText, isTranslating: false } : c
+        )
+      );
+    } catch (error) {
+      console.error('Live translation failed:', error);
+      setCaptions(prev => 
+        prev.map(c => c.id === caption.id ? 
+          { ...c, isTranslating: false } : c
+        )
+      );
+    }
+  };
+
+  const toggleLiveTranslation = () => {
+    setIsLiveTranslationEnabled(prev => {
+      const newState = !prev;
+      if (newState) {
+        toast({
+          title: "🌐 Live Translation Enabled",
+          description: `New captions will be translated to ${localStorage.getItem('preferredLanguage') || 'Spanish'}`
+        });
+      } else {
+        toast({
+          title: "Live Translation Disabled",
+          description: "New captions will show in original language only"
+        });
+      }
+      return newState;
+    });
+  };
+
   const handleCaptionTranslate = async (caption: Caption) => {
     try {
-      toast({
-        title: "🌐 Translating...",
-        description: "Processing translation with AI."
-      });
+      setCaptions(prev => 
+        prev.map(c => c.id === caption.id ? 
+          { ...c, isTranslating: true } : c
+        )
+      );
       
       const translatedText = await aiService.translateText(caption.text);
       
-      // Update the caption with translation
       setCaptions(prev => 
         prev.map(c => c.id === caption.id ? 
-          { ...c, translatedText } : c
+          { ...c, translatedText, isTranslating: false } : c
         )
       );
       
@@ -371,9 +416,14 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
         description: `Translated to ${localStorage.getItem('preferredLanguage') || 'Spanish'}`
       });
     } catch (error) {
+      setCaptions(prev => 
+        prev.map(c => c.id === caption.id ? 
+          { ...c, isTranslating: false } : c
+        )
+      );
       toast({
         title: "Translation Failed",
-        description: "Please check your AI configuration and try again.",
+        description: "Please try again.",
         variant: "destructive"
       });
     }

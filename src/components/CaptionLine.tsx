@@ -1,6 +1,6 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Trash2 } from "lucide-react";
+import { Trash2, Languages } from "lucide-react";
 
 interface Caption {
   id: string;
@@ -8,6 +8,7 @@ interface Caption {
   timestamp: Date;
   saved?: boolean;
   translatedText?: string;
+  isTranslating?: boolean;
 }
 
 interface CaptionLineProps {
@@ -38,11 +39,25 @@ export const CaptionLine = ({ caption, onDelete, isInterim = false }: CaptionLin
                   </p>
                   
                   {caption.translatedText && (
-                    <div className="mt-2 p-2 bg-accent/10 rounded border-l-2 border-accent">
-                      <p className="text-sm text-accent font-medium">
-                        Translation ({localStorage.getItem('preferredLanguage') || 'Spanish'}):
-                      </p>
-                      <p className="text-foreground">{caption.translatedText}</p>
+                    <div className="mt-3 p-3 bg-accent/10 rounded-lg border-l-2 border-accent">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Languages className="h-3 w-3 text-accent" />
+                        <p className="text-xs font-medium text-accent">
+                          {localStorage.getItem('preferredLanguage') || 'Spanish'} Translation:
+                        </p>
+                      </div>
+                      <p className="text-foreground text-sm">{caption.translatedText}</p>
+                    </div>
+                  )}
+                  
+                  {caption.isTranslating && (
+                    <div className="mt-3 p-3 bg-muted/50 rounded-lg border-l-2 border-muted">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 border-2 border-accent border-t-transparent rounded-full animate-spin"></div>
+                        <p className="text-xs text-muted-foreground">
+                          Translating to {localStorage.getItem('preferredLanguage') || 'Spanish'}...
+                        </p>
+                      </div>
                     </div>
                   )}
                   

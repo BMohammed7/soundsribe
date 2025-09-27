@@ -92,19 +92,48 @@ class AIService {
   async translateText(text: string, targetLanguage?: string): Promise<string> {
     const language = targetLanguage || localStorage.getItem('preferredLanguage') || 'Spanish';
     
-    if (!this.hasApiKey()) {
-      return `[Translation to ${language} not available - AI key required]`;
-    }
+    // Map language names to LibreTranslate language codes
+    const languageMap: Record<string, string> = {
+      'Spanish': 'es',
+      'French': 'fr', 
+      'German': 'de',
+      'Italian': 'it',
+      'Portuguese': 'pt',
+      'Russian': 'ru',
+      'Chinese': 'zh',
+      'Japanese': 'ja',
+      'Korean': 'ko',
+      'Arabic': 'ar',
+      'Hindi': 'hi',
+      'Dutch': 'nl',
+      'Swedish': 'sv'
+    };
 
-    const systemPrompt = `You are a professional translator. Translate the given text to ${language}. 
-Provide only the translation, no explanations or additional text.`;
-
+    const targetLangCode = languageMap[language] || 'es';
+    
     try {
-      const result = await this.callAI(text, systemPrompt);
-      return result.trim();
+      const response = await fetch('https://libretranslate.com/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          q: text,
+          source: 'auto',
+          target: targetLangCode,
+          format: 'text'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Translation API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.translatedText || text;
     } catch (error) {
-      console.error('Translation failed:', error);
-      return `[Translation failed - please try again]`;
+      console.error('LibreTranslate failed:', error);
+      return `[Translation unavailable]`;
     }
   }
 
