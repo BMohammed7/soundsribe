@@ -736,27 +736,6 @@ const translateCaptionLive = async (caption: Caption) => {
                   <SelectItem value="Korean">Korean</SelectItem>
                 </SelectContent>
               </Select>
-              <Button
-                onClick={toggleLiveTranslation}
-                variant={isLiveTranslationEnabled ? "default" : "outline"}
-                size="sm"
-                disabled={!isRecording && !isListening}
-                className="transition-all duration-200 text-xs sm:text-sm"
-              >
-                {isLiveTranslationEnabled ? (
-                  <>
-                    <Languages className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-pulse" />
-                    <span className="hidden xs:inline">Live ON</span>
-                    <span className="xs:hidden">ON</span>
-                  </>
-                ) : (
-                  <>
-                    <Languages className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                    <span className="hidden xs:inline">Live OFF</span>
-                    <span className="xs:hidden">OFF</span>
-                  </>
-                )}
-              </Button>
             </div>
 
             <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
