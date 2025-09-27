@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Play, Download, Upload, FileText, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { speechService } from "@/lib/speechSynthesis";
 
 interface SavedNote {
   id: string;
@@ -40,17 +41,22 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
     }
   };
 
-  const handlePlayTTS = (text: string) => {
+  const handlePlayTTS = async (text: string) => {
     if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.rate = 0.9;
-      utterance.pitch = 1;
-      speechSynthesis.speak(utterance);
-      
-      toast({
-        title: "Playing Audio",
-        description: "Text-to-speech is now playing."
-      });
+      try {
+        await speechService.speak({ text });
+        
+        toast({
+          title: "Playing Audio",
+          description: "Text-to-speech is now playing with your volume and speed settings."
+        });
+      } catch (error) {
+        toast({
+          title: "TTS Error",
+          description: "Failed to play text-to-speech.",
+          variant: "destructive"
+        });
+      }
     } else {
       toast({
         title: "TTS Not Available",
