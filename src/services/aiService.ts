@@ -98,45 +98,32 @@ class AIService {
   }
 
   async translateText(text: string, targetLanguage?: string): Promise<string> {
-    const language = targetLanguage || localStorage.getItem('preferredLanguage') || 'Spanish';
-    
-    // Map language names to LibreTranslate language codes
-    const languageMap: Record<string, string> = {
-      'Spanish': 'es',
-      'French': 'fr', 
-      'German': 'de',
-      'Italian': 'it',
-      'Portuguese': 'pt',
-      'Russian': 'ru',
-      'Chinese': 'zh',
-      'Japanese': 'ja',
-      'Korean': 'ko',
-      'Arabic': 'ar',
-      'Hindi': 'hi',
-      'Dutch': 'nl',
-      'Swedish': 'sv'
-    };
+    const target = targetLanguage || localStorage.getItem('preferredLanguage') || 'Spanish';
 
-    const targetLangCode = languageMap[language] || 'es';
+    try {
+      // Try OpenAI first if we have an API key
+      const { translateWithOpenAI } = await import('@/lib/openaiTranslate');
+      const translated = await translateWithOpenAI(text, { targetLang: target });
+      if (translated) return translated;
+    } catch (e) {
+      console.warn("OpenAI translate failed, falling back to LibreTranslate:", e);
+    }
+
+    // Fallback to LibreTranslate
+    const languageMap: Record<string, string> = {
+      'Spanish': 'es','French':'fr','German':'de','Italian':'it','Portuguese':'pt',
+      'Russian':'ru','Chinese':'zh','Japanese':'ja','Korean':'ko','Arabic':'ar',
+      'Hindi':'hi','Dutch':'nl','Swedish':'sv'
+    };
+    const targetLangCode = languageMap[target] || 'es';
     
     try {
       const response = await fetch('https://libretranslate.com/translate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          q: text,
-          source: 'auto',
-          target: targetLangCode,
-          format: 'text'
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ q: text, source: 'auto', target: targetLangCode, format: 'text' })
       });
-
-      if (!response.ok) {
-        throw new Error(`Translation API error: ${response.status}`);
-      }
-
+      if (!response.ok) throw new Error(`Translation API error: ${response.status}`);
       const data = await response.json();
       return data.translatedText || text;
     } catch (error) {
