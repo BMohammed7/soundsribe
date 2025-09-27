@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Mic, MicOff, Settings, Save, Languages, FileText, Brain, Heart, AlertTriangle, Smile, Zap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { CaptionLine } from "./CaptionLine";
@@ -13,6 +14,7 @@ import { ThemeToggle } from "./theme-toggle";
 import { SettingsDialog } from "./Settings";
 import { aiService, AIAnalysis, ContextualSuggestion, ToneMode } from "@/services/aiService";
 import { memoryService } from "@/services/memoryService";
+import { translateService } from "@/services/translateService";
 import "../types/speech.d.ts";
 
 interface Caption {
@@ -29,6 +31,12 @@ interface Caption {
     action: 'save' | 'translate' | 'summarize';
     confidence: number;
   };
+}
+
+interface TranslatedItem {
+  id: string;
+  src: string;
+  dst: string;
 }
 
 interface LiveCaptionsProps {
@@ -48,6 +56,9 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [isLiveTranslationEnabled, setIsLiveTranslationEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedToneMode, setSelectedToneMode] = useState<ToneMode>('accurate');
+  const [targetLang, setTargetLang] = useState('French');
+  const [translatedItems, setTranslatedItems] = useState<TranslatedItem[]>([]);
+  const [pendingBuffer, setPendingBuffer] = useState("");
   
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
@@ -89,9 +100,9 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
             setRecordingSession(prev => prev + (prev ? ' ' : '') + finalTranscript.trim());
           }
           processNewCaption(finalTranscript.trim());
-          setCurrentCaption('');
+          setPendingBuffer('');
         } else {
-          setCurrentCaption(interimTranscript);
+          setPendingBuffer(interimTranscript);
         }
       };
 
@@ -107,7 +118,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
 
       recognition.onend = () => {
         setIsListening(false);
-        setCurrentCaption('');
+        setPendingBuffer('');
       };
     }
 
@@ -120,7 +131,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
 
   useEffect(() => {
     scrollToBottom();
-  }, [captions, currentCaption]);
+  }, [captions, translatedItems, pendingBuffer]);
 
   const processNewCaption = async (text: string) => {
     // Add to conversation history
@@ -287,6 +298,9 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       setIsListening(true);
       setIsRecording(true);
       setRecordingSession("");
+      setTranslatedItems([]); // Clear previous translated items
+      setCaptions([]); // Clear previous captions
+      setPendingBuffer(""); // Clear pending buffer
       toast({
         title: "Recording Started",
         description: "Recording everything until you press stop."
@@ -408,20 +422,20 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const translateCaptionLive = async (caption: Caption) => {
     try {
       const textToTranslate = caption.toneAdjustedText || caption.text;
-      const translatedText = await aiService.translateText(textToTranslate);
+      const translatedText = await translateService.translate(textToTranslate, targetLang);
       
-      setCaptions(prev => 
-        prev.map(c => c.id === caption.id ? 
-          { ...c, translatedText, isTranslating: false } : c
-        )
-      );
+      // Add to translated items (newest first)
+      setTranslatedItems(prev => [
+        { id: caption.id, src: textToTranslate, dst: translatedText },
+        ...prev
+      ]);
     } catch (error) {
       console.error('Live translation failed:', error);
-      setCaptions(prev => 
-        prev.map(c => c.id === caption.id ? 
-          { ...c, isTranslating: false } : c
-        )
-      );
+      toast({
+        title: "Translation Failed",
+        description: "Unable to translate this caption.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -446,68 +460,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
 
   // Helper function to get current language
   const getCurrentLanguage = () => {
-    return localStorage.getItem('preferredLanguage') || 'Spanish';
-  };
-
-  const translateAllNotes = async () => {
-    if (!aiService.hasApiKey()) {
-      toast({
-        title: "API Key Required",
-        description: "Please configure OpenAI API key in settings to translate notes.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const notesToTranslate = captions.filter(c => !c.translatedText);
-    if (notesToTranslate.length === 0) {
-      toast({
-        title: "No Notes to Translate",
-        description: "All notes are already translated or no notes exist."
-      });
-      return;
-    }
-
-    const targetLanguage = getCurrentLanguage();
-    
-    try {
-      toast({
-        title: "🌐 Translating All Notes...",
-        description: `Translating ${notesToTranslate.length} notes to ${targetLanguage} using OpenAI.`
-      });
-
-      // Prepare batch translation request
-      const textsToTranslate = notesToTranslate.map(c => c.text).join("\n---NOTE-SEPARATOR---\n");
-      const prompt = `Translate the following notes to ${targetLanguage}. Each note is separated by "---NOTE-SEPARATOR---". Return only the translations in the same order, separated by the same separator:
-
-${textsToTranslate}`;
-
-      const translatedBatch = await aiService.callAI(prompt, `You are a professional translator. Translate text accurately to ${targetLanguage}.`);
-      const translatedTexts = translatedBatch.split("---NOTE-SEPARATOR---").map(t => t.trim());
-
-      // Update captions with translations
-      setCaptions(prev => 
-        prev.map(caption => {
-          const index = notesToTranslate.findIndex(c => c.id === caption.id);
-          if (index !== -1 && translatedTexts[index]) {
-            return { ...caption, translatedText: translatedTexts[index] };
-          }
-          return caption;
-        })
-      );
-
-      toast({
-        title: "Translation Complete!",
-        description: `Successfully translated ${notesToTranslate.length} notes to ${targetLanguage}.`
-      });
-    } catch (error) {
-      console.error('Batch translation failed:', error);
-      toast({
-        title: "Translation Failed",
-        description: "Please check your OpenAI API key and try again.",
-        variant: "destructive"
-      });
-    }
+    return targetLang;
   };
 
   const toggleLiveTranslation = () => {
@@ -516,7 +469,7 @@ ${textsToTranslate}`;
       if (newState) {
         toast({
           title: "🌐 Live Translation Enabled",
-          description: `New captions will be translated to ${getCurrentLanguage()}`
+          description: `New captions will be translated to ${targetLang}`
         });
       } else {
         toast({
@@ -752,8 +705,23 @@ ${textsToTranslate}`;
           <div className="flex flex-col items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-border/50">
             <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
               <span className="text-xs sm:text-sm text-muted-foreground text-center">
-                Translate to: <span className="font-medium text-foreground">{getCurrentLanguage()}</span>
+                Translate to:
               </span>
+              <Select value={targetLang} onValueChange={setTargetLang}>
+                <SelectTrigger className="w-32 h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="French">French</SelectItem>
+                  <SelectItem value="Spanish">Spanish</SelectItem>
+                  <SelectItem value="German">German</SelectItem>
+                  <SelectItem value="Italian">Italian</SelectItem>
+                  <SelectItem value="Portuguese">Portuguese</SelectItem>
+                  <SelectItem value="Chinese">Chinese</SelectItem>
+                  <SelectItem value="Japanese">Japanese</SelectItem>
+                  <SelectItem value="Korean">Korean</SelectItem>
+                </SelectContent>
+              </Select>
               <Button
                 onClick={toggleLiveTranslation}
                 variant={isLiveTranslationEnabled ? "default" : "outline"}
@@ -775,20 +743,6 @@ ${textsToTranslate}`;
                   </>
                 )}
               </Button>
-              
-              {captions.length > 0 && (
-                <Button
-                  onClick={translateAllNotes}
-                  variant="secondary"
-                  size="sm"
-                  className="text-[0.625rem] sm:text-xs"
-                  disabled={!aiService.hasApiKey()}
-                >
-                  <Languages className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
-                  <span className="hidden sm:inline">All ({captions.filter(c => !c.translatedText).length})</span>
-                  <span className="sm:hidden">All</span>
-                </Button>
-              )}
             </div>
 
             <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
@@ -827,7 +781,8 @@ ${textsToTranslate}`;
       {/* Captions Area */}
       <Card className="flex-1 min-h-64 sm:min-h-80 lg:min-h-96 bg-caption-bg border-caption-border shadow-soft">
         <div className="p-3 sm:p-4 lg:p-6 h-full overflow-y-auto">
-          {captions.length === 0 && !currentCaption && (
+          {/* Empty state */}
+          {(isLiveTranslationEnabled ? translatedItems.length === 0 : captions.length === 0) && !pendingBuffer && (
             <div className="flex items-center justify-center h-full text-muted-foreground">
               <div className="text-center px-4">
                 <FileText className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 mx-auto mb-3 sm:mb-4 opacity-50" />
@@ -837,7 +792,33 @@ ${textsToTranslate}`;
             </div>
           )}
           
-          {captions.map((caption) => (
+          {/* Interim preview line */}
+          {pendingBuffer && (
+            <div className="mb-2 px-3 py-2 bg-muted/30 rounded-lg border-l-2 border-primary/40">
+              <p className="text-sm text-muted-foreground italic">{pendingBuffer}</p>
+            </div>
+          )}
+          
+          {/* Translated items (when Live Translate is ON) */}
+          {isLiveTranslationEnabled && translatedItems.map((item) => (
+            <div key={item.id} className="mb-4 p-4 bg-background/50 rounded-lg border border-border/50">
+              {/* Translated text (main display) */}
+              <div className="mb-2">
+                <p className="text-foreground font-medium text-base leading-relaxed">
+                  {item.dst}
+                </p>
+              </div>
+              {/* Original English text (smaller, underneath) */}
+              <div className="mt-2 pt-2 border-t border-border/30">
+                <p className="text-muted-foreground text-sm leading-relaxed">
+                  {item.src}
+                </p>
+              </div>
+            </div>
+          ))}
+          
+          {/* Regular captions (when Live Translate is OFF) */}
+          {!isLiveTranslationEnabled && captions.map((caption) => (
             <div key={caption.id} className="mb-4">
               <div className="relative">
                 <CaptionLine
@@ -863,19 +844,6 @@ ${textsToTranslate}`;
               )}
             </div>
           ))}
-          
-          {currentCaption && (
-            <div className="mb-4">
-              <CaptionLine
-                caption={{
-                  id: 'current',
-                  text: currentCaption,
-                  timestamp: new Date()
-                }}
-                isInterim={true}
-              />
-            </div>
-          )}
           
           <div ref={captionsEndRef} />
         </div>

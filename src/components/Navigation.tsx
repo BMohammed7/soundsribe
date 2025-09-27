@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Mic, FileText, Languages } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Mic, FileText } from "lucide-react";
 
 interface NavigationProps {
   currentPage: 'captions' | 'notes';
@@ -9,8 +8,6 @@ interface NavigationProps {
 }
 
 const Navigation = ({ currentPage, onPageChange, notesCount }: NavigationProps) => {
-  const navigate = useNavigate();
-  
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-surface-elevated border-t border-border shadow-strong z-50">
       <div className="w-full max-w-none sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
@@ -45,16 +42,6 @@ const Navigation = ({ currentPage, onPageChange, notesCount }: NavigationProps) 
                 {notesCount > 99 ? '99+' : notesCount}
               </span>
             )}
-          </Button>
-
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/translate')}
-            className="flex-1 gap-1 sm:gap-2 transition-all duration-200 text-xs sm:text-sm min-h-[2.5rem] sm:min-h-[2.75rem] text-muted-foreground hover:text-foreground"
-          >
-            <Languages className="h-3 w-3 sm:h-4 sm:w-4 shrink-0" />
-            <span className="hidden xs:inline">Translate</span>
-            <span className="xs:hidden">Trans</span>
           </Button>
         </div>
       </div>
