@@ -46,7 +46,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-surface pb-16 sm:pb-20">
+    <div className="min-h-screen bg-gradient-surface pb-16 sm:pb-20 transition-all duration-300 ease-in-out">
       {/* Memory Viewer */}
       <MemoryViewer 
         isOpen={showMemoryViewer} 
@@ -73,11 +73,17 @@ const Index = () => {
         </div>
       </header>
 
-      {currentPage === 'captions' ? (
-        <LiveCaptions onSaveToNotes={handleSaveToNotes} />
-      ) : (
-        <NotesPage notes={savedNotes} onImportNotes={handleImportNotes} />
-      )}
+      <div className="transition-fade">
+        {currentPage === 'captions' ? (
+          <div className="animate-fade-in">
+            <LiveCaptions onSaveToNotes={handleSaveToNotes} />
+          </div>
+        ) : (
+          <div className="animate-fade-in">
+            <NotesPage notes={savedNotes} onImportNotes={handleImportNotes} />
+          </div>
+        )}
+      </div>
       
       <Navigation
         currentPage={currentPage}

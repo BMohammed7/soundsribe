@@ -167,6 +167,24 @@
     transition: var(--transition-bounce);
   }
 
+  /* Enhanced Interactive Transitions */
+  .transition-interactive {
+    @apply transition-all duration-200 ease-in-out hover:scale-105 active:scale-95;
+  }
+  
+  .transition-fade {
+    @apply transition-opacity duration-300 ease-in-out;
+  }
+  
+  .transition-slide-up {
+    @apply transition-transform duration-300 ease-out;
+  }
+
+  /* Smooth Scroll */
+  html {
+    scroll-behavior: smooth;
+  }
+
   /* Responsive Text Utilities */
   .text-responsive-xs {
     @apply text-xs sm:text-sm;
