@@ -15,6 +15,14 @@ const Index = () => {
   const [currentPage, setCurrentPage] = useState<'captions' | 'notes'>('captions');
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
 
+  const handleImportNotes = (importedNotes: SavedNote[]) => {
+    // Merge imported notes with existing ones, avoiding duplicates
+    const existingTexts = new Set(savedNotes.map(note => note.text));
+    const newNotes = importedNotes.filter(note => !existingTexts.has(note.text));
+    
+    setSavedNotes(prev => [...newNotes, ...prev]);
+  };
+
   const handleSaveToNotes = (caption: any) => {
     const newNote: SavedNote = {
       id: caption.id,
@@ -45,7 +53,7 @@ const Index = () => {
       {currentPage === 'captions' ? (
         <LiveCaptions onSaveToNotes={handleSaveToNotes} />
       ) : (
-        <NotesPage notes={savedNotes} />
+        <NotesPage notes={savedNotes} onImportNotes={handleImportNotes} />
       )}
       
       <Navigation

@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Play, Download, FileText, Calendar } from "lucide-react";
+import { Search, Play, Download, Upload, FileText, Calendar } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
 interface SavedNote {
@@ -14,11 +14,13 @@ interface SavedNote {
 
 interface NotesPageProps {
   notes: SavedNote[];
+  onImportNotes?: (importedNotes: SavedNote[]) => void;
 }
 
-const NotesPage = ({ notes }: NotesPageProps) => {
+const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredNotes = notes.filter(note =>
     note.text.toLowerCase().includes(searchQuery.toLowerCase())
@@ -55,6 +57,67 @@ const NotesPage = ({ notes }: NotesPageProps) => {
         description: "Text-to-speech is not supported in your browser.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleImportNotes = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== 'application/json') {
+      toast({
+        title: "Invalid File Type",
+        description: "Please select a JSON file.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const jsonData = JSON.parse(e.target?.result as string);
+        
+        // Validate the imported data structure
+        if (!Array.isArray(jsonData)) {
+          throw new Error("Invalid file format");
+        }
+
+        const importedNotes: SavedNote[] = jsonData.map((item: any, index: number) => ({
+          id: `imported-${Date.now()}-${index}`,
+          text: item.text || '',
+          timestamp: new Date(item.timestamp || Date.now()),
+          saved: true
+        }));
+
+        if (onImportNotes) {
+          onImportNotes(importedNotes);
+        }
+
+        toast({
+          title: "Notes Imported",
+          description: `Successfully imported ${importedNotes.length} notes.`
+        });
+      } catch (error) {
+        toast({
+          title: "Import Failed",
+          description: "The selected file is not a valid notes export.",
+          variant: "destructive"
+        });
+      }
+    };
+
+    reader.readAsText(file);
+    
+    // Reset the input value so the same file can be selected again
+    if (event.target) {
+      event.target.value = '';
     }
   };
 
@@ -96,16 +159,35 @@ const NotesPage = ({ notes }: NotesPageProps) => {
           <h1 className="text-2xl font-bold text-foreground">Saved Notes</h1>
           <p className="text-muted-foreground">{notes.length} saved captions</p>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleExportNotes}
-          disabled={notes.length === 0}
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Export
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleImportNotes}
+            className="gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Import
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportNotes}
+            disabled={notes.length === 0}
+            className="gap-2"
+          >
+            <Download className="h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".json"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
+      />
 
       {/* Search */}
       <div className="relative">
@@ -140,7 +222,7 @@ const NotesPage = ({ notes }: NotesPageProps) => {
             {filteredNotes.map((note) => (
               <Card 
                 key={note.id} 
-                className="p-4 cursor-pointer hover:shadow-medium transition-all duration-200 bg-caption-bg border-caption-border"
+                className="p-4 cursor-pointer hover:shadow-medium transition-all duration-200 bg-caption-bg border-caption-border group"
                 onClick={() => toggleExpanded(note.id)}
               >
                 <div className="flex items-start justify-between gap-3">
