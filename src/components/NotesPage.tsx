@@ -91,24 +91,20 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
     try {
       toast({
         title: "Playing All Notes",
-        description: `Starting playback of ${filteredNotes.length} notes...`
+        description: `Starting playback of ${filteredNotes.length} notes from oldest to newest...`
       });
 
-      for (let i = 0; i < filteredNotes.length && speechService.isSpeaking() === false; i++) {
-        const note = filteredNotes[i];
-        const introText = `Note ${i + 1} of ${filteredNotes.length}:`;
+      // Reverse the order to play oldest to newest
+      const notesToPlay = [...filteredNotes].reverse();
+
+      for (let i = 0; i < notesToPlay.length && speechService.isSpeaking() === false; i++) {
+        const note = notesToPlay[i];
         
-        // Play note number announcement
-        await speechService.speak({ text: introText });
-        
-        // Small pause between intro and content
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Play the actual note content  
+        // Play the note content directly without announcement
         await speechService.speak({ text: note.text });
         
         // Pause between notes
-        if (i < filteredNotes.length - 1) {
+        if (i < notesToPlay.length - 1) {
           await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
