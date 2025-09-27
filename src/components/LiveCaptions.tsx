@@ -853,12 +853,6 @@ const translateCaptionLive = async (caption: Caption) => {
             </div>
           ))}
 
-          {/* Safety net: always show raw English finals as small/gray while Live Translate is ON */}
-          {isLiveTranslationEnabled && captions.map(c => (
-            <div key={`raw-${c.id}`} className="mb-2 text-muted-foreground text-sm opacity-70">
-              {c.text}
-            </div>
-          ))}
           
           {/* Regular captions (when Live Translate is OFF) */}
           {!isLiveTranslationEnabled && captions.map((caption) => (
