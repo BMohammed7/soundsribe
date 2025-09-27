@@ -42,7 +42,12 @@ interface TranslatedItem {
 interface LiveCaptionsProps {
   onSaveToNotes: (caption: Caption) => void;
 }
-
+const LANG_MAP: Record<string, string> = {
+  english: "en", French: "fr", french: "fr", Spanish: "es", spanish: "es",
+  German: "de", german: "de", Italian: "it", italian: "it",
+  Portuguese: "pt", portuguese: "pt", Chinese: "zh", chinese: "zh",
+  Japanese: "ja", japanese: "ja", Korean: "ko", korean: "ko"
+};
 const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [isListening, setIsListening] = useState(false);
   const [captions, setCaptions] = useState<Caption[]>([]);
