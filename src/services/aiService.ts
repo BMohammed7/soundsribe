@@ -54,7 +54,7 @@ class AIService {
     return this.apiKey !== null;
   }
 
-  private async callAI(prompt: string, systemPrompt: string): Promise<string> {
+  async callAI(prompt: string, systemPrompt: string): Promise<string> {
     if (!this.apiKey) {
       throw new Error('AI API key not configured');
     }

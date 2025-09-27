@@ -399,13 +399,79 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     }
   };
 
+  // Helper function to get current language
+  const getCurrentLanguage = () => {
+    return localStorage.getItem('preferredLanguage') || 'Spanish';
+  };
+
+  const translateAllNotes = async () => {
+    if (!aiService.hasApiKey()) {
+      toast({
+        title: "API Key Required",
+        description: "Please configure OpenAI API key in settings to translate notes.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const notesToTranslate = captions.filter(c => !c.translatedText);
+    if (notesToTranslate.length === 0) {
+      toast({
+        title: "No Notes to Translate",
+        description: "All notes are already translated or no notes exist."
+      });
+      return;
+    }
+
+    const targetLanguage = getCurrentLanguage();
+    
+    try {
+      toast({
+        title: "🌐 Translating All Notes...",
+        description: `Translating ${notesToTranslate.length} notes to ${targetLanguage} using OpenAI.`
+      });
+
+      // Prepare batch translation request
+      const textsToTranslate = notesToTranslate.map(c => c.text).join("\n---NOTE-SEPARATOR---\n");
+      const prompt = `Translate the following notes to ${targetLanguage}. Each note is separated by "---NOTE-SEPARATOR---". Return only the translations in the same order, separated by the same separator:
+
+${textsToTranslate}`;
+
+      const translatedBatch = await aiService.callAI(prompt, `You are a professional translator. Translate text accurately to ${targetLanguage}.`);
+      const translatedTexts = translatedBatch.split("---NOTE-SEPARATOR---").map(t => t.trim());
+
+      // Update captions with translations
+      setCaptions(prev => 
+        prev.map(caption => {
+          const index = notesToTranslate.findIndex(c => c.id === caption.id);
+          if (index !== -1 && translatedTexts[index]) {
+            return { ...caption, translatedText: translatedTexts[index] };
+          }
+          return caption;
+        })
+      );
+
+      toast({
+        title: "Translation Complete!",
+        description: `Successfully translated ${notesToTranslate.length} notes to ${targetLanguage}.`
+      });
+    } catch (error) {
+      console.error('Batch translation failed:', error);
+      toast({
+        title: "Translation Failed",
+        description: "Please check your OpenAI API key and try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const toggleLiveTranslation = () => {
     setIsLiveTranslationEnabled(prev => {
       const newState = !prev;
       if (newState) {
         toast({
           title: "🌐 Live Translation Enabled",
-          description: `New captions will be translated to ${localStorage.getItem('preferredLanguage') || 'Spanish'}`
+          description: `New captions will be translated to ${getCurrentLanguage()}`
         });
       } else {
         toast({
@@ -632,6 +698,47 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
                 </>
               )}
             </Button>
+          </div>
+
+          {/* Translation Status & Controls */}
+          <div className="flex flex-col items-center gap-3 pt-4 border-t border-border/50">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                Translate to: <span className="font-medium text-foreground">{getCurrentLanguage()}</span>
+              </span>
+              <Button
+                onClick={toggleLiveTranslation}
+                variant={isLiveTranslationEnabled ? "default" : "outline"}
+                size="sm"
+                disabled={!isRecording && !isListening}
+                className="transition-all duration-200"
+              >
+                {isLiveTranslationEnabled ? (
+                  <>
+                    <Languages className="h-4 w-4 mr-2 animate-pulse" />
+                    Live ON
+                  </>
+                ) : (
+                  <>
+                    <Languages className="h-4 w-4 mr-2" />
+                    Live OFF
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {captions.length > 0 && (
+              <Button
+                onClick={translateAllNotes}
+                variant="secondary"
+                size="sm"
+                className="text-xs"
+                disabled={!aiService.hasApiKey()}
+              >
+                <Languages className="h-3 w-3 mr-1" />
+                Translate All Notes ({captions.filter(c => !c.translatedText).length})
+              </Button>
+            )}
           </div>
         </div>
       </Card>
