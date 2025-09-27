@@ -16,6 +16,7 @@ import { aiService, AIAnalysis, ContextualSuggestion, ToneMode } from "@/service
 import { memoryService } from "@/services/memoryService";
 import { translateService } from "@/services/translateService";
 import { toneAdjuster } from "@/lib/toneAdjuster";
+import { useTranslationSettings } from "@/hooks/useTranslationSettings";
 import "../types/speech.d.ts";
 
 interface Caption {
@@ -43,17 +44,6 @@ interface TranslatedItem {
 interface LiveCaptionsProps {
   onSaveToNotes: (caption: Caption) => void;
 }
-const LANG_MAP: Record<string, string> = {
-  english: "en", English: "en",
-  french: "fr", French: "fr",
-  spanish: "es", Spanish: "es",
-  german: "de", German: "de",
-  italian: "it", Italian: "it",
-  portuguese: "pt", Portuguese: "pt",
-  chinese: "zh", Chinese: "zh",
-  japanese: "ja", Japanese: "ja",
-  korean: "ko", Korean: "ko",
-};
 const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [isListening, setIsListening] = useState(false);
   const [captions, setCaptions] = useState<Caption[]>([]);
@@ -67,21 +57,13 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [isLiveTranslationEnabled, setIsLiveTranslationEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedToneMode, setSelectedToneMode] = useState<ToneMode>('accurate');
-  const [targetLang, setTargetLang] = useState('French');
   const [translatedItems, setTranslatedItems] = useState<TranslatedItem[]>([]);
   const [pendingBuffer, setPendingBuffer] = useState("");
   
+  const { targetLang, setTargetLang, targetLangRef } = useTranslationSettings();
+  
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
-
-  // Normalize language to code and keep latest value in ref
-  const targetLangCode = useMemo(() => {
-    const key = String(targetLang).trim();
-    return LANG_MAP[key] || LANG_MAP[key.toLowerCase()] || targetLang; // allow "fr-CA" pass-through
-  }, [targetLang]);
-
-  const targetLangRef = useRef(targetLangCode);
-  useEffect(() => { targetLangRef.current = targetLangCode; }, [targetLangCode]);
 
   // Keep latest live translation state in ref to avoid stale closures
   const liveRef = useRef(isLiveTranslationEnabled);
@@ -369,7 +351,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
           description: "Processing translation with LibreTranslate API."
         });
         
-        const translatedText = await translateService.translate(recordingSession.trim(), targetLangCode);
+        const translatedText = await translateService.translate(recordingSession.trim(), targetLangRef.current);
         
         // Create a new caption with the translated recording session
         const translatedCaption: Caption = {
@@ -557,7 +539,7 @@ const translateCaptionLive = async (caption: Caption) => {
         )
       );
       
-      const translatedText = await translateService.translate(caption.text, targetLangCode);
+      const translatedText = await translateService.translate(caption.text, targetLangRef.current);
       
       setCaptions(prev => 
         prev.map(c => c.id === caption.id ? 

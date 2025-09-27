@@ -2,9 +2,12 @@ import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Play, Download, Upload, FileText, Calendar, PlayCircle, StopCircle } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Search, Play, Download, Upload, FileText, Calendar, PlayCircle, StopCircle, Languages } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { speechService } from "@/lib/speechSynthesis";
+import { translateService } from "@/services/translateService";
+import { useTranslationSettings } from "@/hooks/useTranslationSettings";
 
 interface SavedNote {
   id: string;
@@ -22,7 +25,10 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
   const [isPlayingAll, setIsPlayingAll] = useState(false);
+  const [translatedNotes, setTranslatedNotes] = useState<Record<string, { dst: string; src: string }>>({});
+  const [translating, setTranslating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { targetLang, setTargetLang, targetLangRef } = useTranslationSettings();
 
   const filteredNotes = notes.filter(note =>
     note.text.toLowerCase().includes(searchQuery.toLowerCase())
@@ -220,6 +226,43 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
     });
   };
 
+  const handleTranslateAllNotes = async () => {
+    if (notes.length === 0) return;
+    setTranslating(true);
+
+    // 1) Insert placeholders so UI shows progress
+    setTranslatedNotes(prev => {
+      const next = { ...prev };
+      for (const n of filteredNotes) {
+        next[n.id] = { dst: "Translating…", src: n.text };
+      }
+      return next;
+    });
+
+    // 2) Translate sequentially or in small batches to avoid hammering
+    const BATCH = 5;
+    const queue = [...filteredNotes];
+    while (queue.length) {
+      const chunk = queue.splice(0, BATCH);
+      await Promise.all(chunk.map(async (n) => {
+        try {
+          const out = await translateService.translate(n.text, targetLangRef.current);
+          setTranslatedNotes(prev => ({ ...prev, [n.id]: { dst: out, src: n.text } }));
+        } catch {
+          setTranslatedNotes(prev => ({ ...prev, [n.id]: { dst: "(translation failed)", src: n.text } }));
+        }
+      }));
+      // small gap to be gentle
+      await new Promise(r => setTimeout(r, 120));
+    }
+
+    setTranslating(false);
+    toast({
+      title: "Translation Complete",
+      description: `Translated ${filteredNotes.length} notes to ${targetLang}.`
+    });
+  };
+
   const toggleExpanded = (noteId: string) => {
     setExpandedNote(expandedNote === noteId ? null : noteId);
   };
@@ -232,42 +275,71 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
           <h1 className="text-2xl font-bold text-foreground">Saved Notes</h1>
           <p className="text-muted-foreground">{notes.length} saved captions</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="default"
-            onClick={isPlayingAll ? handleStopAllNotes : handlePlayAllNotes}
-            disabled={filteredNotes.length === 0}
-            className="gap-2"
-          >
-            {isPlayingAll ? (
-              <>
-                <StopCircle className="h-4 w-4" />
-                Stop All
-              </>
-            ) : (
-              <>
-                <PlayCircle className="h-4 w-4" />
-                Play All ({filteredNotes.length})
-              </>
-            )}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleImportNotes}
-            className="gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Import
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleExportNotes}
-            disabled={notes.length === 0}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2">
+            <Select value={targetLang} onValueChange={setTargetLang}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="French">French</SelectItem>
+                <SelectItem value="Spanish">Spanish</SelectItem>
+                <SelectItem value="German">German</SelectItem>
+                <SelectItem value="Italian">Italian</SelectItem>
+                <SelectItem value="Portuguese">Portuguese</SelectItem>
+                <SelectItem value="Chinese">Chinese</SelectItem>
+                <SelectItem value="Japanese">Japanese</SelectItem>
+                <SelectItem value="Korean">Korean</SelectItem>
+                <SelectItem value="English">English</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="secondary"
+              onClick={handleTranslateAllNotes}
+              disabled={translating || filteredNotes.length === 0}
+              className="gap-2"
+            >
+              <Languages className="h-4 w-4" />
+              {translating ? "Translating…" : "Translate"}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              onClick={isPlayingAll ? handleStopAllNotes : handlePlayAllNotes}
+              disabled={filteredNotes.length === 0}
+              className="gap-2"
+            >
+              {isPlayingAll ? (
+                <>
+                  <StopCircle className="h-4 w-4" />
+                  Stop All
+                </>
+              ) : (
+                <>
+                  <PlayCircle className="h-4 w-4" />
+                  Play All ({filteredNotes.length})
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleImportNotes}
+              className="gap-2"
+            >
+              <Upload className="h-4 w-4" />
+              Import
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleExportNotes}
+              disabled={notes.length === 0}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              Export
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -310,51 +382,79 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredNotes.map((note) => (
-              <Card 
-                key={note.id} 
-                className="p-4 cursor-pointer hover:shadow-medium transition-all duration-200 bg-caption-bg border-caption-border group"
-                onClick={() => toggleExpanded(note.id)}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <p className={`text-foreground leading-relaxed ${
-                      expandedNote === note.id || note.text.length <= 100 
-                        ? '' 
-                        : 'line-clamp-2'
-                    }`}>
-                      {note.text}
-                    </p>
-                    
-                    <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {formatDate(note.timestamp)}
+            {filteredNotes.map((note) => {
+              const pair = translatedNotes[note.id];
+              return (
+                <Card 
+                  key={note.id} 
+                  className="p-4 cursor-pointer hover:shadow-medium transition-all duration-200 bg-caption-bg border-caption-border group"
+                  onClick={() => toggleExpanded(note.id)}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex-1">
+                      {pair ? (
+                        <>
+                          {/* Translated (top) */}
+                          <p className={`text-foreground text-base leading-relaxed font-medium ${
+                            expandedNote === note.id || pair.dst.length <= 100 
+                              ? '' 
+                              : 'line-clamp-2'
+                          }`}>
+                            {pair.dst}
+                          </p>
+                          {/* Original (bottom, gray) */}
+                          <p className={`text-muted-foreground text-sm leading-relaxed mt-1 ${
+                            expandedNote === note.id || pair.src.length <= 100 
+                              ? '' 
+                              : 'line-clamp-1'
+                          }`}>
+                            {pair.src}
+                          </p>
+                        </>
+                      ) : (
+                        // No translation yet: show original as before
+                        <p className={`text-foreground leading-relaxed ${
+                          expandedNote === note.id || note.text.length <= 100 
+                            ? '' 
+                            : 'line-clamp-2'
+                        }`}>
+                          {note.text}
+                        </p>
+                      )}
+                      
+                      <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {formatDate(note.timestamp)}
+                        </div>
+                        <div className="text-success">Saved</div>
+                        {pair && (
+                          <div className="text-primary">Translated</div>
+                        )}
                       </div>
-                      <div className="text-success">Saved</div>
                     </div>
+                    
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePlayTTS(pair ? pair.dst : note.text);
+                      }}
+                      className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Play className="h-4 w-4" />
+                    </Button>
                   </div>
                   
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePlayTTS(note.text);
-                    }}
-                    className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Play className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {note.text.length > 100 && (
-                  <div className="mt-2 text-xs text-muted-foreground">
-                    {expandedNote === note.id ? 'Click to collapse' : 'Click to expand'}
-                  </div>
-                )}
-              </Card>
-            ))}
+                  {(pair ? pair.dst.length > 100 : note.text.length > 100) && (
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      {expandedNote === note.id ? 'Click to collapse' : 'Click to expand'}
+                    </div>
+                  )}
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
