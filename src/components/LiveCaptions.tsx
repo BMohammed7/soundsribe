@@ -148,14 +148,14 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     }
 
     const newCaption: Caption = {
-      id: Date.now().toString(),
-      text,
-      timestamp: new Date(),
-      aiAnalysis,
-      suggested: detectContextualAction(text, aiAnalysis),
-      isTranslating: isLiveTranslationEnabled,
-      isAdjustingTone: selectedToneMode !== 'accurate'
-    };
+  id: crypto.randomUUID(),   // ← instead of Date.now().toString()
+  text,
+  timestamp: new Date(),
+  aiAnalysis,
+  suggested: detectContextualAction(text, aiAnalysis),
+  isTranslating: isLiveTranslationEnabled,
+  isAdjustingTone: selectedToneMode !== 'accurate'
+};
 
     setCaptions(prev => [...prev, newCaption]);
 
@@ -422,30 +422,30 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   // replace your current translateCaptionLive with this
 const translateCaptionLive = async (caption: Caption) => {
   const textToTranslate = caption.toneAdjustedText || caption.text;
+  console.log("[translateCaptionLive] start", { id: caption.id, targetLang, textToTranslate });
 
-  // 1) show something right away so the row doesn't vanish
-  setTranslatedItems(prev => [
-    { id: caption.id, src: textToTranslate, dst: "Translating…" },
-    ...prev,
-  ]);
+  // Insert placeholder so UI has something to show instantly
+  setTranslatedItems(prev => {
+    const next = [{ id: caption.id, src: textToTranslate, dst: "Translating…" }, ...prev];
+    console.log("[translateCaptionLive] placeholder inserted", next[0]);
+    return next;
+  });
 
   try {
     const translatedText = await translateService.translate(textToTranslate, targetLang);
+    console.log("[translateCaptionLive] success", { id: caption.id, translatedText });
 
-    // 2) replace the placeholder with the real translation
-    setTranslatedItems(prev =>
-      prev.map(item =>
-        item.id === caption.id ? { ...item, dst: translatedText } : item
-      )
-    );
+    // Replace placeholder with the real translation
+    setTranslatedItems(prev => {
+      const next = prev.map(item => item.id === caption.id ? { ...item, dst: translatedText } : item);
+      console.log("[translateCaptionLive] placeholder replaced");
+      return next;
+    });
   } catch (error) {
-    // 3) keep the English line; mark failure instead of removing the row
+    console.error("[translateCaptionLive] error", error);
     setTranslatedItems(prev =>
-      prev.map(item =>
-        item.id === caption.id ? { ...item, dst: "(translation failed)" } : item
-      )
+      prev.map(item => item.id === caption.id ? { ...item, dst: "(translation failed)" } : item)
     );
-    console.error("Live translation failed:", error);
     toast({
       title: "Translation Failed",
       description: error instanceof Error ? error.message : String(error),
