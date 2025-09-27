@@ -9,7 +9,7 @@ export interface MemoryItem {
 
 class MemoryService {
   private memories: MemoryItem[] = [];
-  private readonly STORAGE_KEY = 'jarvis_memories';
+  private readonly STORAGE_KEY = 'soundscribe_memories';
 
   constructor() {
     this.loadFromStorage();

@@ -37,7 +37,7 @@ const Index = () => {
       {/* Header with Settings */}
       <header className="sticky top-0 z-40 bg-surface-elevated/80 backdrop-blur-md border-b border-border">
         <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-foreground">Jarvis AI</h1>
+          <h1 className="text-lg font-semibold text-foreground">Soundscribe AI</h1>
           <SettingsDialog />
         </div>
       </header>

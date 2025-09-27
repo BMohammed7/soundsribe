@@ -34,7 +34,7 @@ export const AISetup = ({ onComplete }: AISetupProps) => {
       
       toast({
         title: "AI Activated! 🤖",
-        description: "Jarvis is now ready with advanced AI capabilities."
+        description: "Soundscribe is now ready with advanced AI capabilities."
       });
       
       onComplete();
@@ -67,7 +67,7 @@ export const AISetup = ({ onComplete }: AISetupProps) => {
               <Sparkles className="h-6 w-6 text-accent absolute -top-1 -right-1" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold mb-2">Activate Jarvis AI</h1>
+          <h1 className="text-2xl font-bold mb-2">Activate Soundscribe AI</h1>
           <p className="text-muted-foreground">
             Enable advanced AI features for memory, summarization, translation, and contextual intelligence.
           </p>

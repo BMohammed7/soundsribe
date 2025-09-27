@@ -113,7 +113,7 @@ Provide only the translation, no explanations or additional text.`;
       return this.fallbackAnalysis(text);
     }
 
-    const systemPrompt = `You are Jarvis, an AI assistant analyzing speech for:
+    const systemPrompt = `You are Soundscribe, an AI assistant analyzing speech for:
 1. Memory: Detect "remember this" or important info to save
 2. Entities: Extract people, places, dates, topics
 3. Emotion: Detect tone (happy/sad/angry/excited/frustrated/neutral/urgent)

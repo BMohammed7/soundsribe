@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings, Key, Bot, Languages } from "lucide-react";
+import { Settings, Key, Bot, Languages, Brain } from "lucide-react";
 import { aiService } from "@/services/aiService";
 import { toast } from "@/hooks/use-toast";
 
@@ -50,7 +50,7 @@ export const SettingsDialog = () => {
       
       toast({
         title: "AI Activated! 🤖",
-        description: "Jarvis is now ready with advanced AI capabilities."
+        description: "Soundscribe is now ready with advanced AI capabilities."
       });
       
       setIsOpen(false);
@@ -81,7 +81,7 @@ export const SettingsDialog = () => {
           </DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-4">
+        <div className="space-y-6">
           <div>
             <label className="text-sm font-medium mb-2 block">
               OpenAI API Key {aiService.hasApiKey() ? "(Configured)" : "(Optional)"}
@@ -101,23 +101,37 @@ export const SettingsDialog = () => {
             </p>
           </div>
 
-          <div>
-            <label className="text-sm font-medium mb-2 block flex items-center gap-2">
-              <Languages className="h-4 w-4" />
-              Preferred Translation Language
-            </label>
-            <Select value={preferredLanguage} onValueChange={handleLanguageChange}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select language" />
-              </SelectTrigger>
-              <SelectContent>
-                {languages.map((lang) => (
-                  <SelectItem key={lang} value={lang}>
-                    {lang}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                <Brain className="h-4 w-4" />
+                Memory
+              </label>
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-xs text-muted-foreground">
+                  Auto-save important information and key insights
+                </p>
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                <Languages className="h-4 w-4" />
+                Translation
+              </label>
+              <Select value={preferredLanguage} onValueChange={handleLanguageChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {languages.map((lang) => (
+                    <SelectItem key={lang} value={lang}>
+                      {lang}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <Button 

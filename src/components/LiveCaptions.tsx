@@ -435,7 +435,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold text-foreground">Jarvis Live Captions</h1>
+          <h1 className="text-2xl font-bold text-foreground">Soundscribe Live Captions</h1>
           {aiService.hasApiKey() && (
             <Badge variant="secondary" className="bg-success/10 text-success border-success/30">
               AI Active
