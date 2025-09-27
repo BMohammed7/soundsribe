@@ -42,6 +42,14 @@ export interface ContextualSuggestion {
   entity: string;
 }
 
+export type ToneMode = 'accurate' | 'friendly' | 'simplified';
+
+export interface ToneAdjustment {
+  originalText: string;
+  adjustedText: string;
+  mode: ToneMode;
+}
+
 class AIService {
   private apiKey: string | null = null;
   private baseUrl = 'https://api.openai.com/v1/chat/completions';
@@ -251,6 +259,58 @@ Return JSON only with detected features. Use null for undetected features.`;
     });
 
     return suggestions.slice(0, 4); // Limit to 4 suggestions
+  }
+
+  async adjustTone(text: string, tone: ToneMode): Promise<string> {
+    if (tone === 'accurate') {
+      return text; // No adjustment needed for accurate mode
+    }
+
+    if (!this.hasApiKey()) {
+      // Fallback for when no API key is available
+      switch (tone) {
+        case 'friendly':
+          return text.replace(/\./g, '! 😊').replace(/\?/g, '? 🤔');
+        case 'simplified':
+          return text.replace(/\b\w{8,}\b/g, (match) => {
+            // Simple word replacement for common long words
+            const simplifications: Record<string, string> = {
+              'unfortunately': 'sadly',
+              'approximately': 'about',
+              'immediately': 'right away',
+              'definitely': 'for sure',
+              'particularly': 'especially'
+            };
+            return simplifications[match.toLowerCase()] || match;
+          });
+        default:
+          return text;
+      }
+    }
+
+    try {
+      let systemPrompt = '';
+      let userPrompt = '';
+
+      switch (tone) {
+        case 'friendly':
+          systemPrompt = 'You are a friendly, warm assistant who makes text more casual, playful, and engaging while preserving the original meaning. Add appropriate emojis and make it sound like a friendly conversation.';
+          userPrompt = `Make this text more friendly and casual: "${text}"`;
+          break;
+        case 'simplified':
+          systemPrompt = 'You are an expert at simplifying complex text. Make the text easier to understand by using simpler words, shorter sentences, and clearer explanations while preserving all important information.';
+          userPrompt = `Simplify this text to make it easier to understand: "${text}"`;
+          break;
+        default:
+          return text;
+      }
+
+      const result = await this.callAI(userPrompt, systemPrompt);
+      return result || text;
+    } catch (error) {
+      console.error('Tone adjustment failed:', error);
+      return text;
+    }
   }
 }
 

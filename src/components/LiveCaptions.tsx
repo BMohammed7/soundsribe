@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Mic, MicOff, Settings, Save, Languages, FileText, Brain, Heart, AlertTriangle } from "lucide-react";
+import { Mic, MicOff, Settings, Save, Languages, FileText, Brain, Heart, AlertTriangle, Smile, Zap } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { CaptionLine } from "./CaptionLine";
 import { ContextualActions } from "./ContextualActions";
@@ -10,7 +10,7 @@ import { ContextualSuggestions } from "./ContextualSuggestions";
 import { EmergencyAlert } from "./EmergencyAlert";
 import { MemoryViewer } from "./MemoryViewer";
 import { ThemeToggle } from "./theme-toggle";
-import { aiService, AIAnalysis, ContextualSuggestion } from "@/services/aiService";
+import { aiService, AIAnalysis, ContextualSuggestion, ToneMode } from "@/services/aiService";
 import { memoryService } from "@/services/memoryService";
 import "../types/speech.d.ts";
 
@@ -21,6 +21,8 @@ interface Caption {
   saved?: boolean;
   translatedText?: string;
   isTranslating?: boolean;
+  toneAdjustedText?: string;
+  isAdjustingTone?: boolean;
   aiAnalysis?: AIAnalysis;
   suggested?: {
     action: 'save' | 'translate' | 'summarize';
@@ -44,8 +46,18 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [conversationHistory, setConversationHistory] = useState<string[]>([]);
   const [isLiveTranslationEnabled, setIsLiveTranslationEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [selectedToneMode, setSelectedToneMode] = useState<ToneMode>('accurate');
+  const [isLiveToneEnabled, setIsLiveToneEnabled] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Load preferred tone mode from localStorage
+    const savedToneMode = localStorage.getItem('preferredToneMode') as ToneMode;
+    if (savedToneMode && ['accurate', 'friendly', 'simplified'].includes(savedToneMode)) {
+      setSelectedToneMode(savedToneMode);
+    }
+  }, []);
 
   useEffect(() => {
     // Check if speech recognition is available
@@ -129,13 +141,25 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       timestamp: new Date(),
       aiAnalysis,
       suggested: detectContextualAction(text, aiAnalysis),
-      isTranslating: isLiveTranslationEnabled
+      isTranslating: isLiveTranslationEnabled,
+      isAdjustingTone: isLiveToneEnabled && selectedToneMode !== 'accurate'
     };
 
     setCaptions(prev => [...prev, newCaption]);
 
-    // Automatically save to notes
-    onSaveToNotes(newCaption);
+    // Live tone adjustment if enabled
+    if (isLiveToneEnabled && selectedToneMode !== 'accurate') {
+      adjustCaptionTone(newCaption);
+    }
+
+    // Automatically save to notes (use tone-adjusted text if available)
+    setTimeout(() => {
+      const captionToSave = { ...newCaption };
+      if (captionToSave.toneAdjustedText && isLiveToneEnabled) {
+        captionToSave.text = captionToSave.toneAdjustedText;
+      }
+      onSaveToNotes(captionToSave);
+    }, 500); // Small delay to allow tone adjustment to complete
 
     // Live translation if enabled
     if (isLiveTranslationEnabled) {
@@ -382,7 +406,8 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
 
   const translateCaptionLive = async (caption: Caption) => {
     try {
-      const translatedText = await aiService.translateText(caption.text);
+      const textToTranslate = caption.toneAdjustedText || caption.text;
+      const translatedText = await aiService.translateText(textToTranslate);
       
       setCaptions(prev => 
         prev.map(c => c.id === caption.id ? 
@@ -394,6 +419,25 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       setCaptions(prev => 
         prev.map(c => c.id === caption.id ? 
           { ...c, isTranslating: false } : c
+        )
+      );
+    }
+  };
+
+  const adjustCaptionTone = async (caption: Caption) => {
+    try {
+      const adjustedText = await aiService.adjustTone(caption.text, selectedToneMode);
+      
+      setCaptions(prev => 
+        prev.map(c => c.id === caption.id ? 
+          { ...c, toneAdjustedText: adjustedText, isAdjustingTone: false } : c
+        )
+      );
+    } catch (error) {
+      console.error('Tone adjustment failed:', error);
+      setCaptions(prev => 
+        prev.map(c => c.id === caption.id ? 
+          { ...c, isAdjustingTone: false } : c
         )
       );
     }
@@ -481,6 +525,53 @@ ${textsToTranslate}`;
       }
       return newState;
     });
+  };
+
+  const toggleLiveTone = () => {
+    setIsLiveToneEnabled(prev => {
+      const newState = !prev;
+      if (newState) {
+        toast({
+          title: "🎭 Live Tone Enabled",
+          description: `New captions will be adjusted to ${selectedToneMode} tone`
+        });
+      } else {
+        toast({
+          title: "Live Tone Disabled",
+          description: "New captions will show in original tone only"
+        });
+      }
+      return newState;
+    });
+  };
+
+  const handleToneModeChange = (mode: ToneMode) => {
+    setSelectedToneMode(mode);
+    localStorage.setItem('preferredToneMode', mode);
+    if (isLiveToneEnabled) {
+      toast({
+        title: "🎭 Tone Mode Changed",
+        description: `New captions will use ${mode} tone`
+      });
+    }
+  };
+
+  const getToneModeLabel = (mode: ToneMode) => {
+    switch (mode) {
+      case 'accurate': return 'Accurate';
+      case 'friendly': return 'Friendly';
+      case 'simplified': return 'Simplified';
+      default: return 'Accurate';
+    }
+  };
+
+  const getToneModeIcon = (mode: ToneMode) => {
+    switch (mode) {
+      case 'accurate': return FileText;
+      case 'friendly': return Smile;
+      case 'simplified': return Zap;
+      default: return FileText;
+    }
   };
 
   const handleCaptionTranslate = async (caption: Caption) => {
@@ -740,6 +831,52 @@ ${textsToTranslate}`;
               </Button>
             )}
           </div>
+
+          {/* Tone Controls */}
+          <div className="flex flex-col items-center gap-3 pt-4 border-t border-border/50">
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">
+                Tone: <span className="font-medium text-foreground">{getToneModeLabel(selectedToneMode)}</span>
+              </span>
+              <div className="flex gap-1">
+                {(['accurate', 'friendly', 'simplified'] as ToneMode[]).map((mode) => {
+                  const IconComponent = getToneModeIcon(mode);
+                  return (
+                    <Button
+                      key={mode}
+                      onClick={() => handleToneModeChange(mode)}
+                      variant={selectedToneMode === mode ? "default" : "outline"}
+                      size="sm"
+                      className="h-8 px-3 text-xs"
+                    >
+                      <IconComponent className="h-3 w-3 mr-1" />
+                      {getToneModeLabel(mode)}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <Button
+              onClick={toggleLiveTone}
+              variant={isLiveToneEnabled ? "default" : "outline"}
+              size="sm"
+              disabled={(!isRecording && !isListening) || selectedToneMode === 'accurate'}
+              className="transition-all duration-200"
+            >
+              {isLiveToneEnabled ? (
+                <>
+                  <Smile className="h-4 w-4 mr-2 animate-pulse" />
+                  Live Tone ON
+                </>
+              ) : (
+                <>
+                  <Smile className="h-4 w-4 mr-2" />
+                  Live Tone OFF
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -755,7 +892,7 @@ ${textsToTranslate}`;
         </p>
         {aiService.hasApiKey() && (
           <p className="text-xs text-accent">
-            AI features active: Memory • Emotion • Emergency • Commands • Translation
+            AI features active: Memory • Emotion • Emergency • Commands • Translation • Tone Adjustment
           </p>
         )}
       </div>
