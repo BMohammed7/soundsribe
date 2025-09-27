@@ -297,17 +297,38 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     }
   };
 
-  const handleTranslate = () => {
+  const handleTranslate = async () => {
     if (recordingSession.trim()) {
-      if (aiService.hasApiKey()) {
+      try {
         toast({
           title: "🌐 Translating Session...",
-          description: "Processing translation with AI."
+          description: "Processing translation with LibreTranslate API."
         });
-      } else {
+        
+        const translatedText = await aiService.translateText(recordingSession.trim());
+        
+        // Create a new caption with the translated recording session
+        const translatedCaption: Caption = {
+          id: `translated-${Date.now()}`,
+          text: recordingSession.trim(),
+          translatedText: translatedText,
+          timestamp: new Date(),
+          saved: true
+        };
+        
+        // Add the translated session to captions and notes
+        setCaptions(prev => [translatedCaption, ...prev]);
+        onSaveToNotes(translatedCaption);
+        
         toast({
-          title: "Translation",
-          description: "Translation requires AI configuration."
+          title: "Translation Complete",
+          description: `Session translated to ${localStorage.getItem('preferredLanguage') || 'Spanish'} and saved to notes.`
+        });
+      } catch (error) {
+        toast({
+          title: "Translation Failed",
+          description: "Please try again.",
+          variant: "destructive"
         });
       }
     } else {
@@ -554,7 +575,12 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
             <Button
               onClick={handleTranslate}
               variant="secondary"
-              className="w-24 h-24 rounded-full shadow-mic hover:scale-110 transition-all duration-300"
+              disabled={!recordingSession.trim() || !isRecording}
+              className={`w-24 h-24 rounded-full shadow-mic transition-all duration-300 ${
+                !recordingSession.trim() || !isRecording
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:scale-110'
+              }`}
               size="lg"
             >
               <div className="flex flex-col items-center gap-2">
