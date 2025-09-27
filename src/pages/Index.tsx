@@ -2,8 +2,7 @@ import { useState } from "react";
 import LiveCaptions from "@/components/LiveCaptions";
 import NotesPage from "@/components/NotesPage";
 import Navigation from "@/components/Navigation";
-import { AISetup } from "@/components/AISetup";
-import { aiService } from "@/services/aiService";
+import { SettingsDialog } from "@/components/Settings";
 
 interface SavedNote {
   id: string;
@@ -15,7 +14,6 @@ interface SavedNote {
 const Index = () => {
   const [currentPage, setCurrentPage] = useState<'captions' | 'notes'>('captions');
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
-  const [showAISetup, setShowAISetup] = useState(!aiService.hasApiKey());
 
   const handleSaveToNotes = (caption: any) => {
     const newNote: SavedNote = {
@@ -34,16 +32,16 @@ const Index = () => {
     });
   };
 
-  const handleAISetupComplete = () => {
-    setShowAISetup(false);
-  };
-
-  if (showAISetup) {
-    return <AISetup onComplete={handleAISetupComplete} />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-surface pb-20">
+      {/* Header with Settings */}
+      <header className="sticky top-0 z-40 bg-surface-elevated/80 backdrop-blur-md border-b border-border">
+        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+          <h1 className="text-lg font-semibold text-foreground">Jarvis AI</h1>
+          <SettingsDialog />
+        </div>
+      </header>
+
       {currentPage === 'captions' ? (
         <LiveCaptions onSaveToNotes={handleSaveToNotes} />
       ) : (
