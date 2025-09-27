@@ -761,19 +761,8 @@ ${textsToTranslate}`;
             </Button>
           </div>
 
-          {/* Control Buttons */}
-          <div className="flex items-center justify-center gap-2 pt-4 border-t border-border/50">
-            <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setShowMemoryViewer(true)}
-              className="text-muted-foreground hover:text-foreground"
-              title="View Memory Bank"
-            >
-              <Brain className="h-5 w-5" />
-            </Button>
-            <SettingsDialog />
+          {/* AI Status */}
+          <div className="flex items-center justify-center pt-4 border-t border-border/50">
             {aiService.hasApiKey() && (
               <Badge variant="secondary" className="bg-success/10 text-success border-success/30 text-xs">
                 AI Active
