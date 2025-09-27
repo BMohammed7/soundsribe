@@ -761,16 +761,7 @@ ${textsToTranslate}`;
             </Button>
           </div>
 
-          {/* AI Status */}
-          <div className="flex items-center justify-center pt-4 border-t border-border/50">
-            {aiService.hasApiKey() && (
-              <Badge variant="secondary" className="bg-success/10 text-success border-success/30 text-xs">
-                AI Active
-              </Badge>
-            )}
-          </div>
-
-          {/* Translation Status & Controls */}
+          {/* Translation & Tone Controls */}
           <div className="flex flex-col items-center gap-3 pt-4 border-t border-border/50">
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">
@@ -795,24 +786,21 @@ ${textsToTranslate}`;
                   </>
                 )}
               </Button>
+              
+              {captions.length > 0 && (
+                <Button
+                  onClick={translateAllNotes}
+                  variant="secondary"
+                  size="sm"
+                  className="text-xs"
+                  disabled={!aiService.hasApiKey()}
+                >
+                  <Languages className="h-3 w-3 mr-1" />
+                  All ({captions.filter(c => !c.translatedText).length})
+                </Button>
+              )}
             </div>
-            
-            {captions.length > 0 && (
-              <Button
-                onClick={translateAllNotes}
-                variant="secondary"
-                size="sm"
-                className="text-xs"
-                disabled={!aiService.hasApiKey()}
-              >
-                <Languages className="h-3 w-3 mr-1" />
-                Translate All Notes ({captions.filter(c => !c.translatedText).length})
-              </Button>
-            )}
-          </div>
 
-          {/* Tone Controls */}
-          <div className="flex flex-col items-center gap-3 pt-4 border-t border-border/50">
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">
                 Tone: <span className="font-medium text-foreground">{getToneModeLabel(selectedToneMode)}</span>
@@ -826,7 +814,7 @@ ${textsToTranslate}`;
                       onClick={() => handleToneModeChange(mode)}
                       variant={selectedToneMode === mode ? "default" : "outline"}
                       size="sm"
-                      className="h-8 px-3 text-xs"
+                      className="h-7 px-2 text-xs"
                     >
                       <IconComponent className="h-3 w-3 mr-1" />
                       {getToneModeLabel(mode)}
@@ -834,47 +822,37 @@ ${textsToTranslate}`;
                   );
                 })}
               </div>
+              
+              <Button
+                onClick={toggleLiveTone}
+                variant={isLiveToneEnabled ? "default" : "outline"}
+                size="sm"
+                disabled={(!isRecording && !isListening) || selectedToneMode === 'accurate'}
+                className="h-7 px-2 text-xs"
+              >
+                {isLiveToneEnabled ? (
+                  <>
+                    <Smile className="h-3 w-3 mr-1" />
+                    ON
+                  </>
+                ) : (
+                  <>
+                    <Smile className="h-3 w-3 mr-1" />
+                    OFF
+                  </>
+                )}
+              </Button>
             </div>
-            
-            <Button
-              onClick={toggleLiveTone}
-              variant={isLiveToneEnabled ? "default" : "outline"}
-              size="sm"
-              disabled={(!isRecording && !isListening) || selectedToneMode === 'accurate'}
-              className="transition-all duration-200"
-            >
-              {isLiveToneEnabled ? (
-                <>
-                  <Smile className="h-4 w-4 mr-2 animate-pulse" />
-                  Live Tone ON
-                </>
-              ) : (
-                <>
-                  <Smile className="h-4 w-4 mr-2" />
-                  Live Tone OFF
-                </>
-              )}
-            </Button>
+
+            {aiService.hasApiKey() && (
+              <Badge variant="secondary" className="bg-success/10 text-success border-success/30 text-xs">
+                AI Active
+              </Badge>
+            )}
           </div>
         </div>
       </Card>
 
-      {/* Status Information */}
-      <div className="text-center space-y-2">
-        <p className="text-muted-foreground">
-          {isRecording 
-            ? "🔴 Recording everything until you press STOP" 
-            : isListening 
-              ? "🎤 Live captions active" 
-              : "Choose START for session recording or Live Captions for real-time transcription"
-          }
-        </p>
-        {aiService.hasApiKey() && (
-          <p className="text-xs text-accent">
-            AI features active: Memory • Emotion • Emergency • Commands • Translation • Tone Adjustment
-          </p>
-        )}
-      </div>
 
       {/* Captions Area */}
       <Card className="flex-1 min-h-96 bg-caption-bg border-caption-border shadow-soft">
