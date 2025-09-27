@@ -714,30 +714,6 @@ const translateCaptionLive = async (caption: Caption) => {
             )}
           </div>
 
-          {/* Live Caption Toggle */}
-          <div className="flex items-center justify-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-border/50 flex-wrap">
-            <span className="text-xs sm:text-sm text-muted-foreground">Live Captions:</span>
-            <Button
-              onClick={toggleListening}
-              variant={isListening ? "default" : "outline"}
-              size="sm"
-              className="transition-all duration-200 text-xs sm:text-sm"
-            >
-              {isListening ? (
-                <>
-                  <MicOff className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden xs:inline">Stop Live</span>
-                  <span className="xs:hidden">Stop</span>
-                </>
-              ) : (
-                <>
-                  <Mic className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  <span className="hidden xs:inline">Start Live</span>
-                  <span className="xs:hidden">Start</span>
-                </>
-              )}
-            </Button>
-          </div>
 
           {/* Translation & Tone Controls */}
           <div className="flex flex-col items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-border/50">
