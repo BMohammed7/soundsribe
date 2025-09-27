@@ -129,6 +129,9 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
 
     setCaptions(prev => [...prev, newCaption]);
 
+    // Automatically save to notes
+    onSaveToNotes(newCaption);
+
     // Handle AI analysis results
     if (aiAnalysis) {
       // Handle memory
@@ -338,25 +341,11 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     }
   };
 
-  const handleSaveCaption = (caption: Caption) => {
-    const updatedCaption = { ...caption, saved: true };
-    setCaptions(prev => 
-      prev.map(c => c.id === caption.id ? updatedCaption : c)
-    );
-    onSaveToNotes(updatedCaption);
-    
-    // Also save to memory if it has AI analysis
-    if (caption.aiAnalysis?.memory) {
-      memoryService.addMemory(
-        caption.text,
-        'User manually saved',
-        'medium'
-      );
-    }
-    
+  const handleDeleteCaption = (captionId: string) => {
+    setCaptions(prev => prev.filter(c => c.id !== captionId));
     toast({
-      title: "Saved to Notes",
-      description: "Caption saved successfully."
+      title: "Caption Deleted",
+      description: "Caption removed successfully."
     });
   };
 
@@ -587,7 +576,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
               <div className="relative">
                 <CaptionLine
                   caption={caption}
-                  onSave={() => handleSaveCaption(caption)}
+                  onDelete={() => handleDeleteCaption(caption.id)}
                 />
                 
                 {/* AI Emotion Indicator */}
@@ -598,10 +587,10 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
                 )}
               </div>
               
-              {caption.suggested && (
+              {caption.suggested && caption.suggested.action !== 'save' && (
                 <ContextualActions
                   action={caption.suggested.action}
-                  onSave={() => handleSaveCaption(caption)}
+                  onSave={() => {}} // No longer needed since auto-save is enabled
                   onTranslate={() => handleCaptionTranslate(caption)}
                   onSummarize={() => handleSummarize(caption)}
                 />
