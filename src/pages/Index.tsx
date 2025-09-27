@@ -2,6 +2,8 @@ import { useState } from "react";
 import LiveCaptions from "@/components/LiveCaptions";
 import NotesPage from "@/components/NotesPage";
 import Navigation from "@/components/Navigation";
+import { AISetup } from "@/components/AISetup";
+import { aiService } from "@/services/aiService";
 
 interface SavedNote {
   id: string;
@@ -13,6 +15,7 @@ interface SavedNote {
 const Index = () => {
   const [currentPage, setCurrentPage] = useState<'captions' | 'notes'>('captions');
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
+  const [showAISetup, setShowAISetup] = useState(!aiService.hasApiKey());
 
   const handleSaveToNotes = (caption: any) => {
     const newNote: SavedNote = {
@@ -30,6 +33,14 @@ const Index = () => {
       return [newNote, ...prev];
     });
   };
+
+  const handleAISetupComplete = () => {
+    setShowAISetup(false);
+  };
+
+  if (showAISetup) {
+    return <AISetup onComplete={handleAISetupComplete} />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-surface pb-20">

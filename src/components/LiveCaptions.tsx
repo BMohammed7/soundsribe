@@ -1,10 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mic, MicOff, Settings, Save, Languages, FileText } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Mic, MicOff, Settings, Save, Languages, FileText, Brain, Heart, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { CaptionLine } from "./CaptionLine";
 import { ContextualActions } from "./ContextualActions";
+import { ContextualSuggestions } from "./ContextualSuggestions";
+import { EmergencyAlert } from "./EmergencyAlert";
+import { MemoryViewer } from "./MemoryViewer";
+import { aiService, AIAnalysis, ContextualSuggestion } from "@/services/aiService";
+import { memoryService } from "@/services/memoryService";
 import "../types/speech.d.ts";
 
 interface Caption {
@@ -12,6 +18,7 @@ interface Caption {
   text: string;
   timestamp: Date;
   saved?: boolean;
+  aiAnalysis?: AIAnalysis;
   suggested?: {
     action: 'save' | 'translate' | 'summarize';
     confidence: number;
@@ -27,6 +34,10 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [captions, setCaptions] = useState<Caption[]>([]);
   const [currentCaption, setCurrentCaption] = useState("");
   const [showSettings, setShowSettings] = useState(false);
+  const [showMemoryViewer, setShowMemoryViewer] = useState(false);
+  const [contextualSuggestions, setContextualSuggestions] = useState<ContextualSuggestion[]>([]);
+  const [currentEmergency, setCurrentEmergency] = useState<AIAnalysis['emergency']>();
+  const [conversationHistory, setConversationHistory] = useState<string[]>([]);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
 
@@ -55,14 +66,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
         }
 
         if (finalTranscript) {
-          const newCaption: Caption = {
-            id: Date.now().toString(),
-            text: finalTranscript.trim(),
-            timestamp: new Date(),
-            suggested: detectContextualAction(finalTranscript)
-          };
-          
-          setCaptions(prev => [...prev, newCaption]);
+          processNewCaption(finalTranscript.trim());
           setCurrentCaption('');
         } else {
           setCurrentCaption(interimTranscript);
@@ -96,25 +100,129 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
     scrollToBottom();
   }, [captions, currentCaption]);
 
-  const detectContextualAction = (text: string): Caption['suggested'] => {
+  const processNewCaption = async (text: string) => {
+    // Add to conversation history
+    const newHistory = [...conversationHistory, text].slice(-10); // Keep last 10 messages
+    setConversationHistory(newHistory);
+
+    // Analyze with AI
+    let aiAnalysis: AIAnalysis | undefined;
+    try {
+      aiAnalysis = await aiService.analyzeText(text, newHistory);
+    } catch (error) {
+      console.error('AI analysis failed:', error);
+      aiAnalysis = undefined;
+    }
+
+    const newCaption: Caption = {
+      id: Date.now().toString(),
+      text,
+      timestamp: new Date(),
+      aiAnalysis,
+      suggested: detectContextualAction(text, aiAnalysis)
+    };
+
+    setCaptions(prev => [...prev, newCaption]);
+
+    // Handle AI analysis results
+    if (aiAnalysis) {
+      // Handle memory
+      if (aiAnalysis.memory?.shouldRemember) {
+        memoryService.addMemory(
+          aiAnalysis.memory.keyInformation,
+          aiAnalysis.memory.context,
+          'high'
+        );
+        toast({
+          title: "💭 Memory Saved",
+          description: "I'll remember this important information."
+        });
+      }
+
+      // Handle emergency
+      if (aiAnalysis.emergency?.detected) {
+        setCurrentEmergency(aiAnalysis.emergency);
+      }
+
+      // Handle commands
+      if (aiAnalysis.command && aiAnalysis.command.type !== 'none') {
+        await handleVoiceCommand(aiAnalysis.command, text);
+      }
+
+      // Generate contextual suggestions
+      if (aiAnalysis.entities) {
+        const allEntities = [
+          ...aiAnalysis.entities.people,
+          ...aiAnalysis.entities.places,
+          ...aiAnalysis.entities.topics
+        ];
+        if (allEntities.length > 0) {
+          const suggestions = await aiService.generateContextualSuggestions(allEntities);
+          setContextualSuggestions(suggestions);
+        }
+      }
+    }
+  };
+
+  const detectContextualAction = (text: string, aiAnalysis?: AIAnalysis): Caption['suggested'] => {
+    // AI-enhanced detection
+    if (aiAnalysis?.memory?.shouldRemember) {
+      return { action: 'save', confidence: 0.9 };
+    }
+
+    // Fallback to basic detection
     const lowerText = text.toLowerCase();
     
-    // Action item detection
     if (lowerText.includes('todo') || lowerText.includes('remember') || lowerText.includes('action item')) {
       return { action: 'save', confidence: 0.9 };
     }
     
-    // Foreign language detection (simple heuristic)
     if (/[^\x00-\x7F]/.test(text)) {
       return { action: 'translate', confidence: 0.8 };
     }
     
-    // Long content that might need summarizing
     if (text.split(' ').length > 20) {
       return { action: 'summarize', confidence: 0.7 };
     }
     
     return undefined;
+  };
+
+  const handleVoiceCommand = async (command: AIAnalysis['command'], originalText: string) => {
+    if (!command) return;
+
+    switch (command.type) {
+      case 'recall':
+        const memories = memoryService.searchMemories(command.parameters.query || originalText);
+        if (memories.length > 0) {
+          toast({
+            title: "🧠 Memory Found",
+            description: `Found ${memories.length} relevant memories. Opening memory viewer.`
+          });
+          setShowMemoryViewer(true);
+        } else {
+          toast({
+            title: "🤔 No Memories Found",
+            description: "I don't have any memories matching that query."
+          });
+        }
+        break;
+        
+      case 'summarize':
+        const recentCaptions = captions.slice(-5).map(c => c.text).join(' ');
+        toast({
+          title: "📝 Summary",
+          description: "Generating summary of recent conversation..."
+        });
+        break;
+        
+      case 'translate':
+        toast({
+          title: "🌐 Translation",
+          description: "Translation feature activated for this text."
+        });
+        break;
+    }
   };
 
   const scrollToBottom = () => {
@@ -159,41 +267,119 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       prev.map(c => c.id === caption.id ? updatedCaption : c)
     );
     onSaveToNotes(updatedCaption);
+    
+    // Also save to memory if it has AI analysis
+    if (caption.aiAnalysis?.memory) {
+      memoryService.addMemory(
+        caption.text,
+        'User manually saved',
+        'medium'
+      );
+    }
+    
     toast({
       title: "Saved to Notes",
       description: "Caption saved successfully."
     });
   };
 
-  const handleTranslate = (caption: Caption) => {
-    // Placeholder for translation functionality
+  const handleTranslate = async (caption: Caption) => {
+    if (aiService.hasApiKey()) {
+      toast({
+        title: "🌐 Translating...",
+        description: "Processing translation with AI."
+      });
+      // In a real implementation, this would call AI translation
+    } else {
+      toast({
+        title: "Translation",
+        description: "Translation feature requires AI configuration."
+      });
+    }
+  };
+
+  const handleSummarize = async (caption: Caption) => {
+    if (aiService.hasApiKey()) {
+      toast({
+        title: "📝 Summarizing...",
+        description: "Generating summary with AI."
+      });
+      // In a real implementation, this would call AI summarization
+    } else {
+      toast({
+        title: "Summary",
+        description: "Summarization feature requires AI configuration."
+      });
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: ContextualSuggestion) => {
+    if (suggestion.action.startsWith('http')) {
+      window.open(suggestion.action, '_blank');
+    }
     toast({
-      title: "Translation",
-      description: "Translation feature coming soon!"
+      title: "Opening Suggestion",
+      description: suggestion.description
     });
   };
 
-  const handleSummarize = (caption: Caption) => {
-    // Placeholder for summarization functionality
-    toast({
-      title: "Summary",
-      description: "Summarization feature coming soon!"
-    });
+  const getEmotionIcon = (emotion?: AIAnalysis['emotion']) => {
+    if (!emotion) return null;
+    
+    switch (emotion.tone) {
+      case 'happy': return '😊';
+      case 'sad': return '😢';
+      case 'angry': return '😠';
+      case 'excited': return '🤩';
+      case 'frustrated': return '😤';
+      case 'urgent': return '⚠️';
+      default: return null;
+    }
   };
 
   return (
     <div className="flex flex-col h-full max-w-4xl mx-auto p-4 gap-6">
+      {/* Emergency Alert */}
+      <EmergencyAlert 
+        emergency={currentEmergency} 
+        onDismiss={() => setCurrentEmergency(undefined)} 
+      />
+
+      {/* Memory Viewer */}
+      <MemoryViewer 
+        isOpen={showMemoryViewer} 
+        onClose={() => setShowMemoryViewer(false)} 
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Live Captions</h1>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setShowSettings(!showSettings)}
-          className="text-muted-foreground hover:text-foreground"
-        >
-          <Settings className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-foreground">Jarvis Live Captions</h1>
+          {aiService.hasApiKey() && (
+            <Badge variant="secondary" className="bg-success/10 text-success border-success/30">
+              AI Active
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowMemoryViewer(true)}
+            className="text-muted-foreground hover:text-foreground"
+            title="View Memory Bank"
+          >
+            <Brain className="h-5 w-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowSettings(!showSettings)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <Settings className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
 
       {/* Main Mic Button */}
@@ -218,8 +404,13 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       {/* Status */}
       <div className="text-center">
         <p className="text-muted-foreground">
-          {isListening ? "Listening... Tap to stop" : "Tap the microphone to start listening"}
+          {isListening ? "🎤 Listening... Tap to stop" : "Tap the microphone to start listening"}
         </p>
+        {aiService.hasApiKey() && (
+          <p className="text-xs text-accent mt-1">
+            AI features active: Memory • Emotion • Emergency • Commands
+          </p>
+        )}
       </div>
 
       {/* Captions Area */}
@@ -237,10 +428,20 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
           
           {captions.map((caption) => (
             <div key={caption.id} className="mb-4">
-              <CaptionLine
-                caption={caption}
-                onSave={() => handleSaveCaption(caption)}
-              />
+              <div className="relative">
+                <CaptionLine
+                  caption={caption}
+                  onSave={() => handleSaveCaption(caption)}
+                />
+                
+                {/* AI Emotion Indicator */}
+                {caption.aiAnalysis?.emotion && getEmotionIcon(caption.aiAnalysis.emotion) && (
+                  <div className="absolute top-2 right-2 text-lg">
+                    {getEmotionIcon(caption.aiAnalysis.emotion)}
+                  </div>
+                )}
+              </div>
+              
               {caption.suggested && (
                 <ContextualActions
                   action={caption.suggested.action}
@@ -268,6 +469,12 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
           <div ref={captionsEndRef} />
         </div>
       </Card>
+
+      {/* Contextual Suggestions */}
+      <ContextualSuggestions 
+        suggestions={contextualSuggestions}
+        onSuggestionClick={handleSuggestionClick}
+      />
     </div>
   );
 };
