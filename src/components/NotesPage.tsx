@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, Play, Download, Upload, FileText, Calendar } from "lucide-react";
+import { Search, Play, Download, Upload, FileText, Calendar, PlayCircle, StopCircle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { speechService } from "@/lib/speechSynthesis";
 
@@ -21,6 +21,7 @@ interface NotesPageProps {
 const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedNote, setExpandedNote] = useState<string | null>(null);
+  const [isPlayingAll, setIsPlayingAll] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredNotes = notes.filter(note =>
@@ -64,6 +65,76 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
         variant: "destructive"
       });
     }
+  };
+
+  const handlePlayAllNotes = async () => {
+    if (!('speechSynthesis' in window)) {
+      toast({
+        title: "TTS Not Available",
+        description: "Text-to-speech is not supported in your browser.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (filteredNotes.length === 0) {
+      toast({
+        title: "No Notes to Play",
+        description: "Add some notes first to use this feature.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsPlayingAll(true);
+    
+    try {
+      toast({
+        title: "Playing All Notes",
+        description: `Starting playback of ${filteredNotes.length} notes...`
+      });
+
+      for (let i = 0; i < filteredNotes.length && speechService.isSpeaking() === false; i++) {
+        const note = filteredNotes[i];
+        const introText = `Note ${i + 1} of ${filteredNotes.length}:`;
+        
+        // Play note number announcement
+        await speechService.speak({ text: introText });
+        
+        // Small pause between intro and content
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Play the actual note content  
+        await speechService.speak({ text: note.text });
+        
+        // Pause between notes
+        if (i < filteredNotes.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+
+      toast({
+        title: "Playback Complete",
+        description: "Finished playing all notes."
+      });
+    } catch (error) {
+      toast({
+        title: "Playback Error",
+        description: "An error occurred during playback.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsPlayingAll(false);
+    }
+  };
+
+  const handleStopAllNotes = () => {
+    speechService.stop();
+    setIsPlayingAll(false);
+    toast({
+      title: "Playback Stopped",
+      description: "Audio playback has been stopped."
+    });
   };
 
   const handleImportNotes = () => {
@@ -166,6 +237,24 @@ const NotesPage = ({ notes, onImportNotes }: NotesPageProps) => {
           <p className="text-muted-foreground">{notes.length} saved captions</p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="default"
+            onClick={isPlayingAll ? handleStopAllNotes : handlePlayAllNotes}
+            disabled={filteredNotes.length === 0}
+            className="gap-2"
+          >
+            {isPlayingAll ? (
+              <>
+                <StopCircle className="h-4 w-4" />
+                Stop All
+              </>
+            ) : (
+              <>
+                <PlayCircle className="h-4 w-4" />
+                Play All ({filteredNotes.length})
+              </>
+            )}
+          </Button>
           <Button
             variant="outline"
             onClick={handleImportNotes}
