@@ -1,7 +1,5 @@
 import { useState } from "react";
-import LiveCaptions from "@/components/LiveCaptions";
 import NotesPage from "@/components/NotesPage";
-import Navigation from "@/components/Navigation";
 import { SettingsDialog } from "@/components/Settings";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
@@ -16,7 +14,6 @@ interface SavedNote {
 }
 
 const Index = () => {
-  const [currentPage, setCurrentPage] = useState<'captions' | 'notes'>('captions');
   const [savedNotes, setSavedNotes] = useState<SavedNote[]>([]);
   const [showMemoryViewer, setShowMemoryViewer] = useState(false);
 
@@ -28,22 +25,6 @@ const Index = () => {
     setSavedNotes(prev => [...newNotes, ...prev]);
   };
 
-  const handleSaveToNotes = (caption: any) => {
-    const newNote: SavedNote = {
-      id: caption.id,
-      text: caption.text,
-      timestamp: caption.timestamp,
-      saved: true
-    };
-    
-    setSavedNotes(prev => {
-      const existing = prev.find(note => note.id === caption.id);
-      if (existing) {
-        return prev;
-      }
-      return [newNote, ...prev];
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gradient-surface pb-16 sm:pb-20 transition-all duration-300 ease-in-out">
@@ -73,23 +54,9 @@ const Index = () => {
         </div>
       </header>
 
-      <div className="transition-fade">
-        {currentPage === 'captions' ? (
-          <div className="animate-fade-in">
-            <LiveCaptions onSaveToNotes={handleSaveToNotes} />
-          </div>
-        ) : (
-          <div className="animate-fade-in">
-            <NotesPage notes={savedNotes} onImportNotes={handleImportNotes} />
-          </div>
-        )}
+      <div className="animate-fade-in">
+        <NotesPage notes={savedNotes} onImportNotes={handleImportNotes} />
       </div>
-      
-      <Navigation
-        currentPage={currentPage}
-        onPageChange={setCurrentPage}
-        notesCount={savedNotes.length}
-      />
     </div>
   );
 };
