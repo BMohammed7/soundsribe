@@ -48,7 +48,7 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
   const [isLiveTranslationEnabled, setIsLiveTranslationEnabled] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [selectedToneMode, setSelectedToneMode] = useState<ToneMode>('accurate');
-  const [isLiveToneEnabled, setIsLiveToneEnabled] = useState(false);
+  
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const captionsEndRef = useRef<HTMLDivElement>(null);
 
@@ -143,20 +143,20 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
       aiAnalysis,
       suggested: detectContextualAction(text, aiAnalysis),
       isTranslating: isLiveTranslationEnabled,
-      isAdjustingTone: isLiveToneEnabled && selectedToneMode !== 'accurate'
+      isAdjustingTone: selectedToneMode !== 'accurate'
     };
 
     setCaptions(prev => [...prev, newCaption]);
 
-    // Live tone adjustment if enabled
-    if (isLiveToneEnabled && selectedToneMode !== 'accurate') {
+    // Live tone adjustment if not accurate mode
+    if (selectedToneMode !== 'accurate') {
       adjustCaptionTone(newCaption);
     }
 
     // Automatically save to notes (use tone-adjusted text if available)
     setTimeout(() => {
       const captionToSave = { ...newCaption };
-      if (captionToSave.toneAdjustedText && isLiveToneEnabled) {
+      if (captionToSave.toneAdjustedText && selectedToneMode !== 'accurate') {
         captionToSave.text = captionToSave.toneAdjustedText;
       }
       onSaveToNotes(captionToSave);
@@ -528,33 +528,16 @@ ${textsToTranslate}`;
     });
   };
 
-  const toggleLiveTone = () => {
-    setIsLiveToneEnabled(prev => {
-      const newState = !prev;
-      if (newState) {
-        toast({
-          title: "🎭 Live Tone Enabled",
-          description: `New captions will be adjusted to ${selectedToneMode} tone`
-        });
-      } else {
-        toast({
-          title: "Live Tone Disabled",
-          description: "New captions will show in original tone only"
-        });
-      }
-      return newState;
-    });
-  };
 
   const handleToneModeChange = (mode: ToneMode) => {
     setSelectedToneMode(mode);
     localStorage.setItem('preferredToneMode', mode);
-    if (isLiveToneEnabled) {
-      toast({
-        title: "🎭 Tone Mode Changed",
-        description: `New captions will use ${mode} tone`
-      });
-    }
+    toast({
+      title: "🎭 Tone Mode Changed", 
+      description: mode === 'accurate' 
+        ? "New captions will show in original tone"
+        : `New captions will use ${mode} tone`
+    });
   };
 
   const getToneModeLabel = (mode: ToneMode) => {
@@ -829,26 +812,6 @@ ${textsToTranslate}`;
                   );
                 })}
               </div>
-              
-              <Button
-                onClick={toggleLiveTone}
-                variant={isLiveToneEnabled ? "default" : "outline"}
-                size="sm"
-                disabled={(!isRecording && !isListening) || selectedToneMode === 'accurate'}
-                className="h-6 sm:h-7 px-1.5 sm:px-2 text-[0.625rem] sm:text-xs"
-              >
-                {isLiveToneEnabled ? (
-                  <>
-                    <Smile className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                    <span>ON</span>
-                  </>
-                ) : (
-                  <>
-                    <Smile className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
-                    <span>OFF</span>
-                  </>
-                )}
-              </Button>
             </div>
 
             {aiService.hasApiKey() && (
