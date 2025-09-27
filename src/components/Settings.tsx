@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Settings, Key, Bot, Languages, Brain } from "lucide-react";
+import { Settings, Key, Bot, Languages, Brain, Volume2, Gauge } from "lucide-react";
 import { aiService } from "@/services/aiService";
 import { toast } from "@/hooks/use-toast";
 
@@ -15,6 +16,12 @@ export const SettingsDialog = () => {
   const [preferredLanguage, setPreferredLanguage] = useState(
     localStorage.getItem('preferredLanguage') || 'Spanish'
   );
+  const [volume, setVolume] = useState([
+    parseInt(localStorage.getItem('speechVolume') || '80')
+  ]);
+  const [speed, setSpeed] = useState([
+    parseFloat(localStorage.getItem('speechSpeed') || '1.0')
+  ]);
 
   const languages = [
     'Spanish', 'French', 'German', 'Italian', 'Portuguese', 'Russian',
@@ -27,6 +34,24 @@ export const SettingsDialog = () => {
     toast({
       title: "Language Updated",
       description: `Translation language set to ${language}`
+    });
+  };
+
+  const handleVolumeChange = (newVolume: number[]) => {
+    setVolume(newVolume);
+    localStorage.setItem('speechVolume', newVolume[0].toString());
+    toast({
+      title: "Volume Updated",
+      description: `Speech volume set to ${newVolume[0]}%`
+    });
+  };
+
+  const handleSpeedChange = (newSpeed: number[]) => {
+    setSpeed(newSpeed);
+    localStorage.setItem('speechSpeed', newSpeed[0].toString());
+    toast({
+      title: "Speed Updated", 
+      description: `Speech speed set to ${newSpeed[0]}x`
     });
   };
 
@@ -101,7 +126,7 @@ export const SettingsDialog = () => {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="text-sm font-medium mb-2 block flex items-center gap-2">
                 <Brain className="h-4 w-4" />
@@ -131,6 +156,55 @@ export const SettingsDialog = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Speech Controls */}
+          <div className="space-y-4">
+            <h3 className="text-sm font-medium text-foreground">Speech Controls</h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                  <Volume2 className="h-4 w-4" />
+                  Volume ({volume[0]}%)
+                </label>
+                <div className="px-3">
+                  <Slider
+                    value={volume}
+                    onValueChange={handleVolumeChange}
+                    max={100}
+                    min={0}
+                    step={5}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>0%</span>
+                    <span>100%</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium mb-2 block flex items-center gap-2">
+                  <Gauge className="h-4 w-4" />
+                  Speed ({speed[0]}x)
+                </label>
+                <div className="px-3">
+                  <Slider
+                    value={speed}
+                    onValueChange={handleSpeedChange}
+                    max={2.0}
+                    min={0.5}
+                    step={0.1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                    <span>0.5x</span>
+                    <span>2.0x</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
