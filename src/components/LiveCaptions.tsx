@@ -649,7 +649,7 @@ ${textsToTranslate}`;
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto p-4 gap-6">
+    <div className="flex flex-col h-full w-full max-w-none sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto p-3 sm:p-4 lg:p-6 gap-3 sm:gap-4 lg:gap-6">
       {/* Emergency Alert */}
       <EmergencyAlert 
         emergency={currentEmergency} 
@@ -665,22 +665,22 @@ ${textsToTranslate}`;
 
       {/* Interactive Control Panel */}
       <Card className="bg-gradient-subtle border-primary/20 shadow-elegant">
-        <div className="p-6 space-y-6">
+        <div className="p-3 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 lg:space-y-6">
           {/* Main Controls */}
-          <div className="flex justify-center gap-4">
+          <div className="flex justify-center gap-2 sm:gap-3 lg:gap-4 flex-wrap">
             <Button
               onClick={startRecording}
               disabled={isRecording}
-              className={`w-24 h-24 rounded-full shadow-mic transition-all duration-300 ${
+              className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full shadow-mic transition-all duration-300 ${
                 isRecording 
                   ? 'opacity-50 cursor-not-allowed' 
                   : 'gradient-mic hover:scale-110'
               }`}
               size="lg"
             >
-              <div className="flex flex-col items-center gap-2">
-                <Mic className="h-8 w-8" />
-                <span className="text-xs">START</span>
+              <div className="flex flex-col items-center gap-1 sm:gap-2">
+                <Mic className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
+                <span className="text-[0.625rem] sm:text-xs font-medium">START</span>
               </div>
             </Button>
             
@@ -688,16 +688,16 @@ ${textsToTranslate}`;
               onClick={stopRecording}
               disabled={!isRecording}
               variant="destructive"
-              className={`w-24 h-24 rounded-full shadow-mic transition-all duration-300 ${
+              className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full shadow-mic transition-all duration-300 ${
                 !isRecording 
                   ? 'opacity-50 cursor-not-allowed' 
                   : 'hover:scale-110 animate-pulse'
               }`}
               size="lg"
             >
-              <div className="flex flex-col items-center gap-2">
-                <MicOff className="h-8 w-8" />
-                <span className="text-xs">STOP</span>
+              <div className="flex flex-col items-center gap-1 sm:gap-2">
+                <MicOff className="h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8" />
+                <span className="text-[0.625rem] sm:text-xs font-medium">STOP</span>
               </div>
             </Button>
             
@@ -705,7 +705,7 @@ ${textsToTranslate}`;
               onClick={toggleLiveTranslation}
               variant={isLiveTranslationEnabled ? "default" : "secondary"}
               disabled={!isRecording}
-              className={`w-24 h-24 rounded-full shadow-mic transition-all duration-300 ${
+              className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-full shadow-mic transition-all duration-300 ${
                 !isRecording
                   ? 'opacity-50 cursor-not-allowed'
                   : isLiveTranslationEnabled
@@ -714,9 +714,11 @@ ${textsToTranslate}`;
               }`}
               size="lg"
             >
-              <div className="flex flex-col items-center gap-2">
-                <Languages className={`h-8 w-8 ${isLiveTranslationEnabled ? 'animate-pulse' : ''}`} />
-                <span className="text-xs">{isLiveTranslationEnabled ? 'LIVE ON' : 'LIVE OFF'}</span>
+              <div className="flex flex-col items-center gap-1 sm:gap-2">
+                <Languages className={`h-5 w-5 sm:h-6 sm:w-6 lg:h-8 lg:w-8 ${isLiveTranslationEnabled ? 'animate-pulse' : ''}`} />
+                <span className="text-[0.625rem] sm:text-xs font-medium text-center leading-tight">
+                  {isLiveTranslationEnabled ? 'LIVE ON' : 'LIVE OFF'}
+                </span>
               </div>
             </Button>
           </div>
@@ -725,46 +727,48 @@ ${textsToTranslate}`;
           <div className="text-center space-y-2">
             {isRecording && (
               <div className="flex items-center justify-center gap-2">
-                <div className="w-3 h-3 bg-destructive rounded-full animate-pulse"></div>
-                <p className="text-destructive font-semibold">Recording Session...</p>
+                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-destructive rounded-full animate-pulse"></div>
+                <p className="text-destructive font-semibold text-sm sm:text-base">Recording Session...</p>
               </div>
             )}
             
             {recordingSession && (
-              <div className="bg-muted/50 rounded-lg p-4 max-w-2xl mx-auto">
-                <p className="text-sm text-muted-foreground mb-2">Current Recording:</p>
-                <p className="text-foreground">{recordingSession}</p>
+              <div className="bg-muted/50 rounded-lg p-3 sm:p-4 max-w-full sm:max-w-2xl mx-auto">
+                <p className="text-xs sm:text-sm text-muted-foreground mb-2">Current Recording:</p>
+                <p className="text-foreground text-sm sm:text-base break-words">{recordingSession}</p>
               </div>
             )}
           </div>
 
           {/* Live Caption Toggle */}
-          <div className="flex items-center justify-center gap-3 pt-4 border-t border-border/50">
-            <span className="text-sm text-muted-foreground">Live Captions:</span>
+          <div className="flex items-center justify-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-border/50 flex-wrap">
+            <span className="text-xs sm:text-sm text-muted-foreground">Live Captions:</span>
             <Button
               onClick={toggleListening}
               variant={isListening ? "default" : "outline"}
               size="sm"
-              className="transition-all duration-200"
+              className="transition-all duration-200 text-xs sm:text-sm"
             >
               {isListening ? (
                 <>
-                  <MicOff className="h-4 w-4 mr-2" />
-                  Stop Live
+                  <MicOff className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden xs:inline">Stop Live</span>
+                  <span className="xs:hidden">Stop</span>
                 </>
               ) : (
                 <>
-                  <Mic className="h-4 w-4 mr-2" />
-                  Start Live
+                  <Mic className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden xs:inline">Start Live</span>
+                  <span className="xs:hidden">Start</span>
                 </>
               )}
             </Button>
           </div>
 
           {/* Translation & Tone Controls */}
-          <div className="flex flex-col items-center gap-3 pt-4 border-t border-border/50">
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
+          <div className="flex flex-col items-center gap-2 sm:gap-3 pt-3 sm:pt-4 border-t border-border/50">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+              <span className="text-xs sm:text-sm text-muted-foreground text-center">
                 Translate to: <span className="font-medium text-foreground">{getCurrentLanguage()}</span>
               </span>
               <Button
@@ -772,17 +776,19 @@ ${textsToTranslate}`;
                 variant={isLiveTranslationEnabled ? "default" : "outline"}
                 size="sm"
                 disabled={!isRecording && !isListening}
-                className="transition-all duration-200"
+                className="transition-all duration-200 text-xs sm:text-sm"
               >
                 {isLiveTranslationEnabled ? (
                   <>
-                    <Languages className="h-4 w-4 mr-2 animate-pulse" />
-                    Live ON
+                    <Languages className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 animate-pulse" />
+                    <span className="hidden xs:inline">Live ON</span>
+                    <span className="xs:hidden">ON</span>
                   </>
                 ) : (
                   <>
-                    <Languages className="h-4 w-4 mr-2" />
-                    Live OFF
+                    <Languages className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                    <span className="hidden xs:inline">Live OFF</span>
+                    <span className="xs:hidden">OFF</span>
                   </>
                 )}
               </Button>
@@ -792,20 +798,21 @@ ${textsToTranslate}`;
                   onClick={translateAllNotes}
                   variant="secondary"
                   size="sm"
-                  className="text-xs"
+                  className="text-[0.625rem] sm:text-xs"
                   disabled={!aiService.hasApiKey()}
                 >
-                  <Languages className="h-3 w-3 mr-1" />
-                  All ({captions.filter(c => !c.translatedText).length})
+                  <Languages className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-1" />
+                  <span className="hidden sm:inline">All ({captions.filter(c => !c.translatedText).length})</span>
+                  <span className="sm:hidden">All</span>
                 </Button>
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
+              <span className="text-xs sm:text-sm text-muted-foreground text-center">
                 Tone: <span className="font-medium text-foreground">{getToneModeLabel(selectedToneMode)}</span>
               </span>
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap justify-center">
                 {(['accurate', 'friendly', 'simplified'] as ToneMode[]).map((mode) => {
                   const IconComponent = getToneModeIcon(mode);
                   return (
@@ -814,10 +821,10 @@ ${textsToTranslate}`;
                       onClick={() => handleToneModeChange(mode)}
                       variant={selectedToneMode === mode ? "default" : "outline"}
                       size="sm"
-                      className="h-7 px-2 text-xs"
+                      className="h-6 sm:h-7 px-1.5 sm:px-2 text-[0.625rem] sm:text-xs"
                     >
-                      <IconComponent className="h-3 w-3 mr-1" />
-                      {getToneModeLabel(mode)}
+                      <IconComponent className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                      <span className="hidden xs:inline">{getToneModeLabel(mode)}</span>
                     </Button>
                   );
                 })}
@@ -828,24 +835,24 @@ ${textsToTranslate}`;
                 variant={isLiveToneEnabled ? "default" : "outline"}
                 size="sm"
                 disabled={(!isRecording && !isListening) || selectedToneMode === 'accurate'}
-                className="h-7 px-2 text-xs"
+                className="h-6 sm:h-7 px-1.5 sm:px-2 text-[0.625rem] sm:text-xs"
               >
                 {isLiveToneEnabled ? (
                   <>
-                    <Smile className="h-3 w-3 mr-1" />
-                    ON
+                    <Smile className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                    <span>ON</span>
                   </>
                 ) : (
                   <>
-                    <Smile className="h-3 w-3 mr-1" />
-                    OFF
+                    <Smile className="h-2.5 w-2.5 sm:h-3 sm:w-3 mr-0.5 sm:mr-1" />
+                    <span>OFF</span>
                   </>
                 )}
               </Button>
             </div>
 
             {aiService.hasApiKey() && (
-              <Badge variant="secondary" className="bg-success/10 text-success border-success/30 text-xs">
+              <Badge variant="secondary" className="bg-success/10 text-success border-success/30 text-[0.625rem] sm:text-xs">
                 AI Active
               </Badge>
             )}
@@ -855,14 +862,14 @@ ${textsToTranslate}`;
 
 
       {/* Captions Area */}
-      <Card className="flex-1 min-h-96 bg-caption-bg border-caption-border shadow-soft">
-        <div className="p-6 h-full overflow-y-auto">
+      <Card className="flex-1 min-h-64 sm:min-h-80 lg:min-h-96 bg-caption-bg border-caption-border shadow-soft">
+        <div className="p-3 sm:p-4 lg:p-6 h-full overflow-y-auto">
           {captions.length === 0 && !currentCaption && (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              <div className="text-center">
-                <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
-                <p className="text-lg">Captions will appear here</p>
-                <p className="text-sm mt-2">Start listening to see real-time transcription</p>
+              <div className="text-center px-4">
+                <FileText className="h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 mx-auto mb-3 sm:mb-4 opacity-50" />
+                <p className="text-base sm:text-lg lg:text-xl font-medium">Captions will appear here</p>
+                <p className="text-xs sm:text-sm lg:text-base mt-2 max-w-sm mx-auto">Start listening to see real-time transcription</p>
               </div>
             </div>
           )}

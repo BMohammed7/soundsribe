@@ -166,4 +166,64 @@
   .transition-bounce {
     transition: var(--transition-bounce);
   }
+
+  /* Responsive Text Utilities */
+  .text-responsive-xs {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-base {
+    @apply text-sm sm:text-base lg:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-base sm:text-lg lg:text-xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+  
+  /* Responsive Spacing Utilities */
+  .gap-responsive-sm {
+    @apply gap-2 sm:gap-3 lg:gap-4;
+  }
+  
+  .gap-responsive-base {
+    @apply gap-3 sm:gap-4 lg:gap-6;
+  }
+  
+  .p-responsive {
+    @apply p-3 sm:p-4 lg:p-6;
+  }
+  
+  .px-responsive {
+    @apply px-3 sm:px-4 lg:px-6;
+  }
+  
+  .py-responsive {
+    @apply py-2 sm:py-3 lg:py-4;
+  }
+
+  /* Touch-friendly Interactive Elements */
+  .touch-target {
+    @apply min-h-[2.75rem] sm:min-h-[3rem];
+  }
+  
+  .touch-icon {
+    @apply h-5 w-5 sm:h-6 sm:w-6;
+  }
+
+  /* Responsive Container Sizes */
+  .container-responsive {
+    @apply w-full max-w-none sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto;
+  }
+
+  .container-content {
+    @apply max-w-md sm:max-w-lg lg:max-w-2xl xl:max-w-4xl mx-auto;
+  }
 }

@@ -46,7 +46,7 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-surface pb-20">
+    <div className="min-h-screen bg-gradient-surface pb-16 sm:pb-20">
       {/* Memory Viewer */}
       <MemoryViewer 
         isOpen={showMemoryViewer} 
@@ -55,18 +55,18 @@ const Index = () => {
 
       {/* Header with Settings */}
       <header className="sticky top-0 z-40 bg-surface-elevated/80 backdrop-blur-md border-b border-border">
-        <div className="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-foreground">Soundscribe AI</h1>
-          <div className="flex items-center gap-2">
+        <div className="w-full max-w-none sm:max-w-2xl lg:max-w-4xl xl:max-w-6xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-3 flex items-center justify-between">
+          <h1 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground truncate">Soundscribe AI</h1>
+          <div className="flex items-center gap-1 sm:gap-2">
             <ThemeToggle />
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setShowMemoryViewer(true)}
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground h-8 w-8 sm:h-10 sm:w-10"
               title="View Memory Bank"
             >
-              <Brain className="h-5 w-5" />
+              <Brain className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             <SettingsDialog />
           </div>
