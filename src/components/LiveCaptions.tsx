@@ -15,6 +15,7 @@ import { SettingsDialog } from "./Settings";
 import { aiService, AIAnalysis, ContextualSuggestion, ToneMode } from "@/services/aiService";
 import { memoryService } from "@/services/memoryService";
 import { translateService } from "@/services/translateService";
+import { toneAdjuster } from "@/lib/toneAdjuster";
 import "../types/speech.d.ts";
 
 interface Caption {
@@ -477,7 +478,8 @@ const translateCaptionLive = async (caption: Caption) => {
 
   const adjustCaptionTone = async (caption: Caption) => {
     try {
-      const adjustedText = await aiService.adjustTone(caption.text, selectedToneMode);
+      // Use built-in non-AI tone adjustment
+      const adjustedText = toneAdjuster.adjustTone(caption.text, selectedToneMode);
       
       setCaptions(prev => 
         prev.map(c => c.id === caption.id ? 
@@ -525,7 +527,7 @@ const translateCaptionLive = async (caption: Caption) => {
       title: "🎭 Tone Mode Changed", 
       description: mode === 'accurate' 
         ? "New captions will show in original tone"
-        : `New captions will use ${mode} tone`
+        : `New captions will use built-in ${mode} tone adjustments`
     });
   };
 
@@ -804,11 +806,9 @@ const translateCaptionLive = async (caption: Caption) => {
               </div>
             </div>
 
-            {aiService.hasApiKey() && (
-              <Badge variant="secondary" className="bg-success/10 text-success border-success/30 text-[0.625rem] sm:text-xs">
-                AI Active
-              </Badge>
-            )}
+            <Badge variant="secondary" className="bg-muted/50 text-muted-foreground border-muted text-[0.625rem] sm:text-xs">
+              Built-in Tone Modes
+            </Badge>
           </div>
         </div>
       </Card>
