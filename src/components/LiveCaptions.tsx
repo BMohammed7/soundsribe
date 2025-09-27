@@ -573,19 +573,21 @@ const LiveCaptions = ({ onSaveToNotes }: LiveCaptionsProps) => {
             </Button>
             
             <Button
-              onClick={handleTranslate}
-              variant="secondary"
-              disabled={!recordingSession.trim() || !isRecording}
+              onClick={toggleLiveTranslation}
+              variant={isLiveTranslationEnabled ? "default" : "secondary"}
+              disabled={!isRecording}
               className={`w-24 h-24 rounded-full shadow-mic transition-all duration-300 ${
-                !recordingSession.trim() || !isRecording
+                !isRecording
                   ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:scale-110'
+                  : isLiveTranslationEnabled
+                    ? 'hover:scale-110 ring-2 ring-primary/30'
+                    : 'hover:scale-110'
               }`}
               size="lg"
             >
               <div className="flex flex-col items-center gap-2">
-                <Languages className="h-8 w-8" />
-                <span className="text-xs">TRANSLATE</span>
+                <Languages className={`h-8 w-8 ${isLiveTranslationEnabled ? 'animate-pulse' : ''}`} />
+                <span className="text-xs">{isLiveTranslationEnabled ? 'LIVE ON' : 'LIVE OFF'}</span>
               </div>
             </Button>
           </div>
